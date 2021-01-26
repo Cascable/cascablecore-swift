@@ -47,17 +47,17 @@ public extension TypedIdentifier {
     static var focusMode: TypedIdentifier<PropertyCommonValueFocusMode> { return PropertyIdentifierStorage.focusMode }
     static var autoExposureMode: TypedIdentifier<PropertyCommonValueAutoExposureMode> { return PropertyIdentifierStorage.autoExposureMode }
     static var whiteBalance: TypedIdentifier<PropertyCommonValueWhiteBalance> { return PropertyIdentifierStorage.whiteBalance }
+    static var lightMeterStatus: TypedIdentifier<PropertyCommonValueLightMeterStatus> { return PropertyIdentifierStorage.lightMeterStatus }
+    static var shotsAvailable: TypedIdentifier<Int> { return PropertyIdentifierStorage.shotsAvailable }
+    static var mirrorLockupStage: TypedIdentifier<PropertyCommonValueMirrorLockupStage> { return PropertyIdentifierStorage.mirrorLockupStage }
 
     // Things we don't have common values for yet
     static var afSystem: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.afSystem }
     static var driveMode: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.driveMode }
-    static var mirrorLockupStage: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.mirrorLockupStage }
-    static var shotsAvailable: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.shotsAvailable }
     static var colorTone: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.colorTone }
     static var artFilter: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.artFilter }
     static var noiseReduction: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.noiseReduction }
     static var imageQuality: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.imageQuality }
-    static var lightMeterStatus: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.lightMeterStatus }
     static var exposureMeteringMode: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.exposureMeteringMode }
 }
 
@@ -174,6 +174,14 @@ extension Bool: TranslateableFromCommonValue {
     }
 }
 
+extension Int: TranslateableFromCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> Int? {
+        guard let value = commonValue as? PropertyCommonValue else { return nil }
+        guard value != PropertyCommonValueNone else { return nil }
+        return value
+    }
+}
+
 extension PropertyCommonValuePowerSource: TranslateableFromCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValuePowerSource? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
@@ -211,6 +219,22 @@ extension PropertyCommonValueWhiteBalance: TranslateableFromCommonValue {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
         return PropertyCommonValueWhiteBalance(rawValue: typedValue)
+    }
+}
+
+extension PropertyCommonValueMirrorLockupStage: TranslateableFromCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueMirrorLockupStage? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueMirrorLockupStage(rawValue: typedValue)
+    }
+}
+
+extension PropertyCommonValueLightMeterStatus: TranslateableFromCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueLightMeterStatus? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueLightMeterStatus(rawValue: typedValue)
     }
 }
 
@@ -264,16 +288,16 @@ fileprivate struct PropertyIdentifierStorage {
     static let focusMode = TypedIdentifier<PropertyCommonValueFocusMode>(identifier: .focusMode, type: PropertyCommonValueFocusMode.self)
     static let autoExposureMode = TypedIdentifier<PropertyCommonValueAutoExposureMode>(identifier: .autoExposureMode, type: PropertyCommonValueAutoExposureMode.self)
     static let whiteBalance = TypedIdentifier<PropertyCommonValueWhiteBalance>(identifier: .whiteBalance, type: PropertyCommonValueWhiteBalance.self)
+    static let lightMeterStatus = TypedIdentifier<PropertyCommonValueLightMeterStatus>(identifier: .lightMeterStatus, type: PropertyCommonValueLightMeterStatus.self)
+    static let shotsAvailable = TypedIdentifier<Int>(identifier: .shotsAvailable, type: Int.self)
+    static let mirrorLockupStage = TypedIdentifier<PropertyCommonValueMirrorLockupStage>(identifier: .mirrorLockupStage, type: PropertyCommonValueMirrorLockupStage.self)
 
     // Things we don't have common values for yet
     static let afSystem = TypedIdentifier<NoCommonValues>(identifier: .afSystem, type: NoCommonValues.self)
     static let driveMode = TypedIdentifier<NoCommonValues>(identifier: .driveMode, type: NoCommonValues.self)
-    static let mirrorLockupStage = TypedIdentifier<NoCommonValues>(identifier: .mirrorLockupStage, type: NoCommonValues.self)
-    static let shotsAvailable = TypedIdentifier<NoCommonValues>(identifier: .shotsAvailable, type: NoCommonValues.self)
     static let colorTone = TypedIdentifier<NoCommonValues>(identifier: .colorTone, type: NoCommonValues.self)
     static let artFilter = TypedIdentifier<NoCommonValues>(identifier: .artFilter, type: NoCommonValues.self)
     static let noiseReduction = TypedIdentifier<NoCommonValues>(identifier: .noiseReduction, type: NoCommonValues.self)
     static let imageQuality = TypedIdentifier<NoCommonValues>(identifier: .imageQuality, type: NoCommonValues.self)
-    static let lightMeterStatus = TypedIdentifier<NoCommonValues>(identifier: .lightMeterStatus, type: NoCommonValues.self)
     static let exposureMeteringMode = TypedIdentifier<NoCommonValues>(identifier: .exposureMeteringMode, type: NoCommonValues.self)
 }

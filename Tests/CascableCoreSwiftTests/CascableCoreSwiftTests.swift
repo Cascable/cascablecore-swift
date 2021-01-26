@@ -1,5 +1,5 @@
 import XCTest
-@testable import cascablecore_swift
+@testable import CascableCoreSwift
 
 final class cascablecore_swiftTests: XCTestCase {
     func testExample() {

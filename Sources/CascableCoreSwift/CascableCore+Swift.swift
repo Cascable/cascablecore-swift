@@ -188,7 +188,37 @@ public class TypedCameraProperty<CommonValueType: Equatable & TranslateableFromC
             TypedCameraPropertyValue<CommonValueType>(wrapping: $0, of: identifier)
         }) ?? []
     }
+}
 
+extension TypedCameraProperty where CommonValueType: ExposureCompensationValue {
+
+    /// Returns the item value in `validSettableValues` that is considered the "zero" value.
+    /// For most properties this will be the first item in the array, but in some (for example,
+    /// E.V.) it will be a value somewhere in the middle.
+    ///
+    /// Values at a lesser index than this value in `validSettableValues` are considered to
+    /// be negative. This can be useful when constructing UI.
+
+    /// Guaranteed to return a non-nil value if `validSettableValues` isn't empty.
+
+    var validZeroValue: TypedCameraPropertyValue<ExposureCompensationValue>? {
+        guard let exposureCompensations = validSettableValues as? [TypedCameraPropertyValue<ExposureCompensationValue>] else { return nil }
+        let zeroEV = ExposureCompensationValue.zeroEV
+        return exposureCompensations.first(where: { $0.commonValue == zeroEV })
+    }
+}
+
+extension TypedCameraProperty where CommonValueType: ISOValue {
+
+    /// Returns the value in `validSettableValues` that, when set, will cause the camera to
+    /// attempt to derive the value for this property automatically.
+    ///
+    /// If there is no such value, returns `nil`.
+    var validAutomaticValue: TypedCameraPropertyValue<ISOValue>? {
+        guard let isos = validSettableValues as? [TypedCameraPropertyValue<ISOValue>] else { return nil }
+        let autoISO = ISOValue.automaticISO
+        return isos.first(where: { $0.commonValue == autoISO })
+    }
 }
 
 // MARK: -
