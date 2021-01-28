@@ -52,6 +52,7 @@ public class TypedCameraProperty<CommonValueType: Equatable & TranslateableFromC
         category = identifier.propertyIdentifier.category
         wrappedProperty = property
         localizedDisplayName = property.localizedDisplayName
+        camera = property.camera
         // ----- super.init() -----
         updateCurrentValue()
         updateValidSettableValues()
@@ -67,6 +68,9 @@ public class TypedCameraProperty<CommonValueType: Equatable & TranslateableFromC
 
     /// The property's identifier.
     public let identifier: TypedIdentifier<CommonValueType>
+
+    /// The camera from which the property is derived.
+    public private(set) weak var camera: Camera?
 
     /// The untyped CascableCore property the receiver is wrapping.
     private let wrappedProperty: CameraProperty
