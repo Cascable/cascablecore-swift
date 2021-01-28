@@ -50,10 +50,10 @@ public extension TypedIdentifier {
     static var lightMeterStatus: TypedIdentifier<PropertyCommonValueLightMeterStatus> { return PropertyIdentifierStorage.lightMeterStatus }
     static var shotsAvailable: TypedIdentifier<Int> { return PropertyIdentifierStorage.shotsAvailable }
     static var mirrorLockupStage: TypedIdentifier<PropertyCommonValueMirrorLockupStage> { return PropertyIdentifierStorage.mirrorLockupStage }
+    static var afSystem: TypedIdentifier<PropertyCommonValueAFSystem> { return PropertyIdentifierStorage.afSystem }
+    static var driveMode: TypedIdentifier<PropertyCommonValueDriveMode> { return PropertyIdentifierStorage.driveMode }
 
     // Things we don't have common values for yet
-    static var afSystem: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.afSystem }
-    static var driveMode: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.driveMode }
     static var colorTone: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.colorTone }
     static var artFilter: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.artFilter }
     static var noiseReduction: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.noiseReduction }
@@ -238,6 +238,22 @@ extension PropertyCommonValueLightMeterStatus: TranslateableFromCommonValue {
     }
 }
 
+extension PropertyCommonValueAFSystem: TranslateableFromCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueAFSystem? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueAFSystem(rawValue: typedValue)
+    }
+}
+
+extension PropertyCommonValueDriveMode: TranslateableFromCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueDriveMode? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueDriveMode(rawValue: typedValue)
+    }
+}
+
 extension ISOValue: TranslateableFromCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Self? {
         return commonValue as? Self
@@ -291,10 +307,10 @@ fileprivate struct PropertyIdentifierStorage {
     static let lightMeterStatus = TypedIdentifier<PropertyCommonValueLightMeterStatus>(identifier: .lightMeterStatus, type: PropertyCommonValueLightMeterStatus.self)
     static let shotsAvailable = TypedIdentifier<Int>(identifier: .shotsAvailable, type: Int.self)
     static let mirrorLockupStage = TypedIdentifier<PropertyCommonValueMirrorLockupStage>(identifier: .mirrorLockupStage, type: PropertyCommonValueMirrorLockupStage.self)
+    static let afSystem = TypedIdentifier<PropertyCommonValueAFSystem>(identifier: .afSystem, type: PropertyCommonValueAFSystem.self)
+    static let driveMode = TypedIdentifier<PropertyCommonValueDriveMode>(identifier: .driveMode, type: PropertyCommonValueDriveMode.self)
 
     // Things we don't have common values for yet
-    static let afSystem = TypedIdentifier<NoCommonValues>(identifier: .afSystem, type: NoCommonValues.self)
-    static let driveMode = TypedIdentifier<NoCommonValues>(identifier: .driveMode, type: NoCommonValues.self)
     static let colorTone = TypedIdentifier<NoCommonValues>(identifier: .colorTone, type: NoCommonValues.self)
     static let artFilter = TypedIdentifier<NoCommonValues>(identifier: .artFilter, type: NoCommonValues.self)
     static let noiseReduction = TypedIdentifier<NoCommonValues>(identifier: .noiseReduction, type: NoCommonValues.self)
