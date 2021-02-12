@@ -1,17 +1,9 @@
-//
-//  CascableCore+Swift.swift
-//  CascableCore
-//
-//  Created by Daniel Kennett (Cascable) on 2021-01-23.
-//  Copyright © 2021 Cascable AB. All rights reserved.
-//
-
 import Foundation
 import StopKit
 import CascableCore
 import ObjectiveC
 
-public extension Camera {
+public extension CameraProperties {
 
     /// Get a property object for the given identifier. If the property is currently unknown, returns an object
     /// with `currentValue`, `validSettableValues`, etc set to `nil`.
@@ -33,7 +25,7 @@ public extension Camera {
 
 fileprivate var typedPropertyStorageObjCHandle: UInt8 = 0
 
-extension Camera {
+extension CameraProperties {
     // Private API
 
     private var propertyStorage: [PropertyIdentifier: Any] {

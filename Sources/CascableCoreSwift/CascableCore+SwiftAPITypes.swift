@@ -1,11 +1,3 @@
-//
-//  SwiftAPITypes.swift
-//  CascableCore Demo
-//
-//  Created by Daniel Kennett (Cascable) on 2021-01-24.
-//  Copyright © 2021 Cascable AB. All rights reserved.
-//
-
 import Foundation
 import CascableCore
 
