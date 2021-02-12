@@ -67,3 +67,32 @@ camera.valuePublisher(for: .shutterSpeed)
         print("Exposure triangle values: \(shutter), \(aperture), \(iso)")
     }
 ```
+
+### Manual Camera Discovery
+
+This package adds a nicer API for manual camera discovery, allowing quick creation of descriptors and a `Result<Camera, Error>`
+result in the completion handler:
+
+
+``` swift
+let manualDiscovery = CameraDiscovery.shared.manualDiscovery
+
+manualDiscovery.discover(.cameraAtSuggestedGateway(.canon)) { result in
+    switch result {
+    case .success(let camera):
+        // Use the camera. Make sure you keep a strong reference to it!
+    case .failure(let error):
+        print("Couldn't resolve camera with error: \(error)")
+    }
+}
+
+manualDiscovery.discover(.cameraType(.canon, atGatewayOfInterface: "en0")) { result in
+    switch result {
+    case .success(let camera):
+        // Use the camera. Make sure you keep a strong reference to it!
+    case .failure(let error):
+        print("Couldn't resolve camera with error: \(error)")
+    }
+}
+```
+
