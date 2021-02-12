@@ -14,51 +14,88 @@ import CascableCore
 /// A `TypedIdentifier` is a strongly-typed replacement for `CBLPropertyIdentifier`.
 public struct TypedIdentifier<CommonValueType: Equatable & TranslateableFromCommonValue> {
     public let propertyIdentifier: PropertyIdentifier
-    public let commonValueType: CommonValueType.Type
 
-    fileprivate init(identifier: PropertyIdentifier, type: CommonValueType.Type) {
+    fileprivate init(identifier: PropertyIdentifier) {
         propertyIdentifier = identifier
-        commonValueType = type
     }
 }
 
 // MARK: - Property Identifier Declarations
 
-public extension TypedIdentifier {
+public extension TypedIdentifier where CommonValueType == ApertureValue {
+    static let aperture = TypedIdentifier(identifier: .aperture)
+}
 
-    // Exposure values
-    static var aperture: TypedIdentifier<ApertureValue> { return PropertyIdentifierStorage.aperture }
-    static var shutterSpeed: TypedIdentifier<ShutterSpeedValue> { return PropertyIdentifierStorage.shutterSpeed }
-    static var iso: TypedIdentifier<ISOValue> { return PropertyIdentifierStorage.iso }
-    static var exposureCompensation: TypedIdentifier<ExposureCompensationValue> { return PropertyIdentifierStorage.exposureCompensation }
-    static var lightMeterReading: TypedIdentifier<ExposureCompensationValue> { return PropertyIdentifierStorage.lightMeterReading }
+public extension TypedIdentifier where CommonValueType == ShutterSpeedValue {
+    static let shutterSpeed = TypedIdentifier(identifier: .shutterSpeed)
+}
 
-    // Bools
-    static var lensStatus: TypedIdentifier<Bool> { return PropertyIdentifierStorage.lensStatus }
-    static var mirrorLockupEnabled: TypedIdentifier<Bool> { return PropertyIdentifierStorage.mirrorLockupEnabled }
-    static var dofPreviewEnabled: TypedIdentifier<Bool> { return PropertyIdentifierStorage.dofPreviewEnabled }
-    static var digitalZoomEnabled: TypedIdentifier<Bool> { return PropertyIdentifierStorage.digitalZoomEnabled }
-    static var inCameraBracketingEnabled: TypedIdentifier<Bool> { return PropertyIdentifierStorage.inCameraBracketingEnabled }
-    static var readyForCapture: TypedIdentifier<Bool> { return PropertyIdentifierStorage.readyForCapture }
+public extension TypedIdentifier where CommonValueType == ISOValue {
+    static let iso = TypedIdentifier(identifier: .isoSpeed)
+}
 
-    // Others
-    static var powerSource: TypedIdentifier<PropertyCommonValuePowerSource> { return PropertyIdentifierStorage.powerSource }
-    static var batteryPowerLevel: TypedIdentifier<PropertyCommonValueBatteryLevel> { return PropertyIdentifierStorage.batteryPowerLevel }
-    static var focusMode: TypedIdentifier<PropertyCommonValueFocusMode> { return PropertyIdentifierStorage.focusMode }
-    static var autoExposureMode: TypedIdentifier<PropertyCommonValueAutoExposureMode> { return PropertyIdentifierStorage.autoExposureMode }
-    static var whiteBalance: TypedIdentifier<PropertyCommonValueWhiteBalance> { return PropertyIdentifierStorage.whiteBalance }
-    static var lightMeterStatus: TypedIdentifier<PropertyCommonValueLightMeterStatus> { return PropertyIdentifierStorage.lightMeterStatus }
-    static var shotsAvailable: TypedIdentifier<Int> { return PropertyIdentifierStorage.shotsAvailable }
-    static var mirrorLockupStage: TypedIdentifier<PropertyCommonValueMirrorLockupStage> { return PropertyIdentifierStorage.mirrorLockupStage }
-    static var afSystem: TypedIdentifier<PropertyCommonValueAFSystem> { return PropertyIdentifierStorage.afSystem }
-    static var driveMode: TypedIdentifier<PropertyCommonValueDriveMode> { return PropertyIdentifierStorage.driveMode }
+public extension TypedIdentifier where CommonValueType == ExposureCompensationValue {
+    static let exposureCompensation = TypedIdentifier(identifier: .exposureCompensation)
+    static let lightMeterReading = TypedIdentifier(identifier: .lightMeterReading)
+}
+
+public extension TypedIdentifier where CommonValueType == Bool {
+    static let lensStatus = TypedIdentifier(identifier: .lensStatus)
+    static let mirrorLockupEnabled = TypedIdentifier(identifier: .mirrorLockupEnabled)
+    static let dofPreviewEnabled = TypedIdentifier(identifier: .dofPreviewEnabled)
+    static let digitalZoomEnabled = TypedIdentifier(identifier: .digitalZoom)
+    static let inCameraBracketingEnabled = TypedIdentifier(identifier: .inCameraBracketingEnabled)
+    static let readyForCapture = TypedIdentifier(identifier: .readyForCapture)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValuePowerSource {
+    static let powerSource = TypedIdentifier(identifier: .powerSource)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueBatteryLevel {
+    static let batteryPowerLevel = TypedIdentifier(identifier: .batteryLevel)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueFocusMode {
+    static let focusMode = TypedIdentifier(identifier: .focusMode)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueAutoExposureMode {
+    static let autoExposureMode = TypedIdentifier(identifier: .autoExposureMode)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueWhiteBalance {
+    static let whiteBalance = TypedIdentifier(identifier: .whiteBalance)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueLightMeterStatus {
+    static let lightMeterStatus = TypedIdentifier(identifier: .lightMeterStatus)
+}
+
+public extension TypedIdentifier where CommonValueType == Int {
+    static let shotsAvailable = TypedIdentifier(identifier: .shotsAvailable)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueMirrorLockupStage {
+    static let mirrorLockupStage = TypedIdentifier(identifier: .mirrorLockupStage)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueAFSystem {
+    static let afSystem = TypedIdentifier(identifier: .afSystem)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueDriveMode {
+    static let driveMode = TypedIdentifier(identifier: .driveMode)
+}
+
+public extension TypedIdentifier where CommonValueType == NoCommonValues {
 
     // Things we don't have common values for yet
-    static var colorTone: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.colorTone }
-    static var artFilter: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.artFilter }
-    static var noiseReduction: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.noiseReduction }
-    static var imageQuality: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.imageQuality }
-    static var exposureMeteringMode: TypedIdentifier<NoCommonValues> { return PropertyIdentifierStorage.exposureMeteringMode }
+    static let colorTone = TypedIdentifier(identifier: .colorTone)
+    static let artFilter = TypedIdentifier(identifier: .artFilter)
+    static let noiseReduction = TypedIdentifier(identifier: .noiseReduction)
+    static let imageQuality = TypedIdentifier(identifier: .imageQuality)
+    static let exposureMeteringMode = TypedIdentifier(identifier: .exposureMeteringMode)
 }
 
 // MARK: - Extensions to CascableCore Identifiers
@@ -276,44 +313,4 @@ extension ExposureCompensationValue: TranslateableFromCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Self? {
         return commonValue as? Self
     }
-}
-
-// MARK: - Property Identifier Storage
-
-// Swift doesn't let us have static stored properties in extensions _or_ in generic types (i.e., the original struct),
-// so we need to do a bit of a song and dance to achieve that sort of API on our TypedIdentifier<> type.
-fileprivate struct PropertyIdentifierStorage {
-    // Exposure values
-    static let aperture = TypedIdentifier<ApertureValue>(identifier: .aperture, type: ApertureValue.self)
-    static let shutterSpeed = TypedIdentifier<ShutterSpeedValue>(identifier: .shutterSpeed, type: ShutterSpeedValue.self)
-    static let iso = TypedIdentifier<ISOValue>(identifier: .isoSpeed, type: ISOValue.self)
-    static let exposureCompensation = TypedIdentifier<ExposureCompensationValue>(identifier: .exposureCompensation, type: ExposureCompensationValue.self)
-    static let lightMeterReading = TypedIdentifier<ExposureCompensationValue>(identifier: .lightMeterReading, type: ExposureCompensationValue.self)
-
-    // Bools
-    static let lensStatus = TypedIdentifier<Bool>(identifier: .lensStatus, type: Bool.self)
-    static let mirrorLockupEnabled = TypedIdentifier<Bool>(identifier: .mirrorLockupEnabled, type: Bool.self)
-    static let dofPreviewEnabled = TypedIdentifier<Bool>(identifier: .dofPreviewEnabled, type: Bool.self)
-    static let digitalZoomEnabled = TypedIdentifier<Bool>(identifier: .digitalZoom, type: Bool.self)
-    static let inCameraBracketingEnabled = TypedIdentifier<Bool>(identifier: .inCameraBracketingEnabled, type: Bool.self)
-    static let readyForCapture = TypedIdentifier<Bool>(identifier: .readyForCapture, type: Bool.self)
-
-    // Others
-    static let powerSource = TypedIdentifier<PropertyCommonValuePowerSource>(identifier: .powerSource, type: PropertyCommonValuePowerSource.self)
-    static let batteryPowerLevel = TypedIdentifier<PropertyCommonValueBatteryLevel>(identifier: .batteryLevel, type: PropertyCommonValueBatteryLevel.self)
-    static let focusMode = TypedIdentifier<PropertyCommonValueFocusMode>(identifier: .focusMode, type: PropertyCommonValueFocusMode.self)
-    static let autoExposureMode = TypedIdentifier<PropertyCommonValueAutoExposureMode>(identifier: .autoExposureMode, type: PropertyCommonValueAutoExposureMode.self)
-    static let whiteBalance = TypedIdentifier<PropertyCommonValueWhiteBalance>(identifier: .whiteBalance, type: PropertyCommonValueWhiteBalance.self)
-    static let lightMeterStatus = TypedIdentifier<PropertyCommonValueLightMeterStatus>(identifier: .lightMeterStatus, type: PropertyCommonValueLightMeterStatus.self)
-    static let shotsAvailable = TypedIdentifier<Int>(identifier: .shotsAvailable, type: Int.self)
-    static let mirrorLockupStage = TypedIdentifier<PropertyCommonValueMirrorLockupStage>(identifier: .mirrorLockupStage, type: PropertyCommonValueMirrorLockupStage.self)
-    static let afSystem = TypedIdentifier<PropertyCommonValueAFSystem>(identifier: .afSystem, type: PropertyCommonValueAFSystem.self)
-    static let driveMode = TypedIdentifier<PropertyCommonValueDriveMode>(identifier: .driveMode, type: PropertyCommonValueDriveMode.self)
-
-    // Things we don't have common values for yet
-    static let colorTone = TypedIdentifier<NoCommonValues>(identifier: .colorTone, type: NoCommonValues.self)
-    static let artFilter = TypedIdentifier<NoCommonValues>(identifier: .artFilter, type: NoCommonValues.self)
-    static let noiseReduction = TypedIdentifier<NoCommonValues>(identifier: .noiseReduction, type: NoCommonValues.self)
-    static let imageQuality = TypedIdentifier<NoCommonValues>(identifier: .imageQuality, type: NoCommonValues.self)
-    static let exposureMeteringMode = TypedIdentifier<NoCommonValues>(identifier: .exposureMeteringMode, type: NoCommonValues.self)
 }

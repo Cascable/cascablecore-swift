@@ -237,9 +237,9 @@ public struct TypedCameraPropertyValue<CommonValueType: Equatable & Translateabl
         wrappedPropertyValue = propertyValue
 
         if let exposureValue = propertyValue as? ExposurePropertyValue {
-            commonValue = type.commonValueType.translateFromCommonValue(exposureValue.exposureValue)
+            commonValue = CommonValueType.translateFromCommonValue(exposureValue.exposureValue)
         } else {
-            commonValue = type.commonValueType.translateFromCommonValue(propertyValue.commonValue)
+            commonValue = CommonValueType.translateFromCommonValue(propertyValue.commonValue)
         }
     }
 
