@@ -1,11 +1,3 @@
-//
-//  CascableCore+Combine.swift
-//  CascableCore Demo
-//
-//  Created by Daniel Kennett (Cascable) on 2021-01-25.
-//  Copyright © 2021 Cascable AB. All rights reserved.
-//
-
 import Foundation
 import CascableCore
 import Combine
@@ -20,8 +12,11 @@ public extension Camera {
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
     @available(iOS 13.0, macOS 10.15, *)
-    func valuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) -> TypedPropertyValuePublisher<CommonValueType, TypedCameraPropertyValue<CommonValueType>?> {
-        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .value, valueTranslation: { $0.currentValue })
+    func valuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
+            AnyPublisher<TypedCameraPropertyValue<CommonValueType>?, Never> {
+
+        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier),
+                                           on: .value, valueTranslation: { $0.currentValue }).eraseToAnyPublisher()
     }
 
     /// Create a publisher for the valid settable values of the given property identifier.
@@ -30,8 +25,10 @@ public extension Camera {
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
     @available(iOS 13.0, macOS 10.15, *)
-    func settableValuesPublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) -> TypedPropertyValuePublisher<CommonValueType, [TypedCameraPropertyValue<CommonValueType>]> {
-        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .validSettableValues, valueTranslation: { $0.validSettableValues })
+    func settableValuesPublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
+            AnyPublisher<[TypedCameraPropertyValue<CommonValueType>], Never> {
+
+        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .validSettableValues, valueTranslation: { $0.validSettableValues }).eraseToAnyPublisher()
     }
 
 }
