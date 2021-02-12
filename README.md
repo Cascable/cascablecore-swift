@@ -44,14 +44,20 @@ If you're a fan of [Combine](https://developer.apple.com/documentation/combine),
 
 #### Basic Usage
 
-There are two APIs added to `Camera`, which are convenience methods for creating publishers for camera values or valid settable values. For example:
+There are APIs added to `Camera` which are convenience methods for creating publishers for camera values or valid settable values. For example:
 
 ``` swift
-camera.valuePublisher(for: .shutterSpeed).sink { shutterSpeed in 
+camera.publisher(for: .shutterSpeed).sink { shutterSpeedProperty in
+    // Fires whenever the current value or valid settable values change.
+}
+
+camera.valuePublisher(for: .shutterSpeed).sink { shutterSpeed in
+    // Fires whenever the current value changes.
     print("The current shutter speed is: \(shutterSpeed?.localizedDisplayValue ?? "nil")")
 }
 
 camera.settableValuesPublisher(for: .shutterSpeed).sink { shutterSpeeds in 
+    // Fires whenever the valid settable values change.
     print("Valid shutter speeds are: \(shutterSpeeds.compactMap({ $0.localizedDisplayValue }))")
 }
 ```
