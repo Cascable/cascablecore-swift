@@ -103,6 +103,11 @@ public extension CameraManualDiscovery {
 
 public extension CameraDiscovery {
 
+    /// A nicer accessor for `CBLWiFiConnectivityDidChangeNotificationName`. Doesn't need an active discovery session to fire.
+    static var wifiConnectivityDidChangeNotification: NSNotification.Name = {
+        NSNotification.Name(rawValue: CBLWiFiConnectivityDidChangeNotificationName)
+    }()
+
     /// A nicer to use accessor to the shared camera discovery object.
     static var shared: CameraDiscovery {
         return sharedInstance()
