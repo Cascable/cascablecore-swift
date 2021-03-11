@@ -5,6 +5,14 @@ public extension CameraCore {
 
     /// Returns the type of camera the receiver represents.
     var cameraType: CameraType {
-        return CameraType(rawValue: cameraFamily)
+        return cameraFamily.type
+    }
+}
+
+public extension CameraFamily {
+
+    /// Returns the corresponding camera type of the receiver.
+    var type: CameraType {
+        return CameraType(rawValue: self)
     }
 }
