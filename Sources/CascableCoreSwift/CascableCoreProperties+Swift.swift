@@ -220,7 +220,12 @@ extension TypedCameraProperty where CommonValueType: ISOValue {
 // MARK: -
 
 /// A property value. This could either be the current value of a property, or something in the list of values that can be set.
-public struct TypedCameraPropertyValue<CommonValueType: Equatable & TranslateableFromCommonValue> {
+public struct TypedCameraPropertyValue<CommonValueType: Equatable & TranslateableFromCommonValue>: Equatable {
+
+    public static func == (lhs: TypedCameraPropertyValue<CommonValueType>,
+                           rhs: TypedCameraPropertyValue<CommonValueType>) -> Bool {
+        return lhs.wrappedPropertyValue.isEqual(rhs.wrappedPropertyValue)
+    }
 
     init(wrapping propertyValue: PropertyValue, of type: TypedIdentifier<CommonValueType>) {
         localizedDisplayValue = propertyValue.localizedDisplayValue
