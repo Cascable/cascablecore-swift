@@ -3,8 +3,10 @@ import CascableCore
 
 // MARK: - Types
 
+public typealias TypedCommonValue = Equatable & TranslateableFromObjCCommonValue
+
 /// A `TypedIdentifier` is a strongly-typed replacement for `CBLPropertyIdentifier`.
-public struct TypedIdentifier<CommonValueType: Equatable & TranslateableFromCommonValue> {
+public struct TypedIdentifier<CommonValueType: TypedCommonValue> {
     public let propertyIdentifier: PropertyIdentifier
 
     fileprivate init(identifier: PropertyIdentifier) {
@@ -183,18 +185,18 @@ internal class CameraPropertyObserverToken: NSObject, CameraPropertyObservation 
 
 /// CascableCore properties that don't have any common value mappings (art filters, etc) will be declared as
 /// having a `CommonValueType` of `NoCommonValues`, and values will always have a `commonValue` of `nil`.
-public struct NoCommonValues: Equatable, TranslateableFromCommonValue {
+public struct NoCommonValues: Equatable, TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> NoCommonValues? {
         return nil
     }
 }
 
 /// This protocol is to allow us to translate to strong types for our Swift API from the weaker types in the ObjC API.
-public protocol TranslateableFromCommonValue {
+public protocol TranslateableFromObjCCommonValue {
     static func translateFromCommonValue(_ commonValue: Any) -> Self?
 }
 
-extension Bool: TranslateableFromCommonValue {
+extension Bool: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Bool? {
         guard let value = commonValue as? PropertyCommonValue else { return nil }
         guard value != PropertyCommonValueNone else { return nil }
@@ -203,7 +205,7 @@ extension Bool: TranslateableFromCommonValue {
     }
 }
 
-extension Int: TranslateableFromCommonValue {
+extension Int: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Int? {
         guard let value = commonValue as? PropertyCommonValue else { return nil }
         guard value != PropertyCommonValueNone else { return nil }
@@ -211,7 +213,7 @@ extension Int: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValuePowerSource: TranslateableFromCommonValue {
+extension PropertyCommonValuePowerSource: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValuePowerSource? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -219,7 +221,7 @@ extension PropertyCommonValuePowerSource: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueBatteryLevel: TranslateableFromCommonValue {
+extension PropertyCommonValueBatteryLevel: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueBatteryLevel? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -227,7 +229,7 @@ extension PropertyCommonValueBatteryLevel: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueFocusMode: TranslateableFromCommonValue {
+extension PropertyCommonValueFocusMode: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueFocusMode? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -235,7 +237,7 @@ extension PropertyCommonValueFocusMode: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueAutoExposureMode: TranslateableFromCommonValue {
+extension PropertyCommonValueAutoExposureMode: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueAutoExposureMode? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -243,7 +245,7 @@ extension PropertyCommonValueAutoExposureMode: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueWhiteBalance: TranslateableFromCommonValue {
+extension PropertyCommonValueWhiteBalance: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueWhiteBalance? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -251,7 +253,7 @@ extension PropertyCommonValueWhiteBalance: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueMirrorLockupStage: TranslateableFromCommonValue {
+extension PropertyCommonValueMirrorLockupStage: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueMirrorLockupStage? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -259,7 +261,7 @@ extension PropertyCommonValueMirrorLockupStage: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueLightMeterStatus: TranslateableFromCommonValue {
+extension PropertyCommonValueLightMeterStatus: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueLightMeterStatus? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -267,7 +269,7 @@ extension PropertyCommonValueLightMeterStatus: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueAFSystem: TranslateableFromCommonValue {
+extension PropertyCommonValueAFSystem: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueAFSystem? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -275,7 +277,7 @@ extension PropertyCommonValueAFSystem: TranslateableFromCommonValue {
     }
 }
 
-extension PropertyCommonValueDriveMode: TranslateableFromCommonValue {
+extension PropertyCommonValueDriveMode: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueDriveMode? {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
@@ -283,25 +285,25 @@ extension PropertyCommonValueDriveMode: TranslateableFromCommonValue {
     }
 }
 
-extension ISOValue: TranslateableFromCommonValue {
+extension ISOValue: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Self? {
         return commonValue as? Self
     }
 }
 
-extension ApertureValue: TranslateableFromCommonValue {
+extension ApertureValue: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Self? {
         return commonValue as? Self
     }
 }
 
-extension ShutterSpeedValue: TranslateableFromCommonValue {
+extension ShutterSpeedValue: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Self? {
         return commonValue as? Self
     }
 }
 
-extension ExposureCompensationValue: TranslateableFromCommonValue {
+extension ExposureCompensationValue: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Self? {
         return commonValue as? Self
     }

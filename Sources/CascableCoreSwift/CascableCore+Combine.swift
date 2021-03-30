@@ -90,7 +90,7 @@ public extension Publisher {
 
 /// A Combine publisher that delivers property values.
 @available(iOS 13.0, macOS 10.15, *)
-public struct TypedPropertyValuePublisher<CommonValueType: Equatable & TranslateableFromCommonValue, PublishedType>: Publisher {
+public struct TypedPropertyValuePublisher<CommonValueType: TypedCommonValue, PublishedType>: Publisher {
     public typealias Output = PublishedType
     public typealias Failure = Never
 

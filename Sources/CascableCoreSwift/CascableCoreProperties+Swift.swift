@@ -37,7 +37,7 @@ extension CameraProperties {
 // MARK: -
 
 /// An object representing the values for a property on the camera.
-public class TypedCameraProperty<CommonValueType: Equatable & TranslateableFromCommonValue>: PropertyObserverInvalidation {
+public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObserverInvalidation {
 
     fileprivate init(identifier propertyIdentifier: TypedIdentifier<CommonValueType>, wrapping property: CameraProperty) {
         identifier = propertyIdentifier
@@ -220,7 +220,7 @@ extension TypedCameraProperty where CommonValueType: ISOValue {
 // MARK: -
 
 /// A property value. This could either be the current value of a property, or something in the list of values that can be set.
-public struct TypedCameraPropertyValue<CommonValueType: Equatable & TranslateableFromCommonValue>: Equatable {
+public struct TypedCameraPropertyValue<CommonValueType: TypedCommonValue>: Equatable {
 
     public static func == (lhs: TypedCameraPropertyValue<CommonValueType>,
                            rhs: TypedCameraPropertyValue<CommonValueType>) -> Bool {
