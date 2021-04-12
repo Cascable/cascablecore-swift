@@ -7,15 +7,81 @@ extension LiveViewTerminationReason: Error {}
 
 // MARK: - Public API
 
+public struct LiveViewOption: RawRepresentable, Hashable {
+    public let rawValue: String
+    public init(rawValue: String) { self.rawValue = rawValue }
+
+    /// If set to `true`, image data will not be decoded in delivered live view frames, so the `image` property of
+    /// delivered frames will be `nil`. All other properties will be populated as normal, including `rawImageData`.
+    /// This can be useful if you have a frame rendering pipeline that doesn't need `NSImage`/`UIImage` objects,
+    /// as turning off image decoding can save a significant amount of CPU resources.
+    ///
+    /// When omitted from the options dictionary, the assumed value for this option is `false`.
+    public static let skipImageDecoding = LiveViewOption(rawValue: CBLLiveViewOptionSkipImageDecoding)
+
+    /// If set to `true` and if supported by the particular camera model you're connected to, live view will be
+    /// configured to favour lower-quality image data in an attempt to achieve a higher live view frame rate.
+    /// If set to `false` (or omitted), live view will be configured to favour the highest quality image.
+    ///
+    /// Setting this option after live view has started will have no effect until live view is restarted.
+    ///
+    /// When omitted from the options dictionary, the assumed value for this option is `false`.
+    public static let favorHighFrameRate = LiveViewOption(rawValue: CBLLiveViewOptionFavorHighFrameRate)
+}
+
+public extension Dictionary where Key == LiveViewOption, Value == Bool {
+
+    /// Converts the dictionary of `LiveViewOption` into an ObjC/CascableCore-compatible options dictionary.
+    var asCascableCoreLiveViewOptions: [String: Any] {
+        return reduce(into: [String: Any](), { $0[$1.key.rawValue] = $1.value })
+    }
+}
+
 public extension CameraLiveView {
 
-    /// Returns the live view frame publisher for the camera.
+    /// Returns the live view frame publisher for the camera without modifying any live view options.
     @available(iOS 13.0, macOS 10.15, *)
     var liveViewPublisher: AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
-        if let box = liveViewPublisherStorage { return box.publisher.eraseToAnyPublisher() }
-        let publisher = LiveViewFramePublisher(for: self)
-        liveViewPublisherStorage = LiveViewPublisherBox(publisher)
+        return liveViewPublisher(options: [:])
+    }
+
+    /// Returns the live view frame publisher for the camera, applying the given options.
+    ///
+    /// - Note: Since there is only one live view frame publisher per camera, options applied here will affect other
+    /// subscriptions to the camera's live view frame publisher. Use the `liveViewPublisher` to get the publisher
+    /// without affecting others, or pass an empty dictionary here.
+    ///
+    /// - Parameter options: The options to apply.
+    @available(iOS 13.0, macOS 10.15, *)
+    func liveViewPublisher(options: [LiveViewOption: Bool]) -> AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
+        let publisher: LiveViewFramePublisher = {
+            if let box = liveViewPublisherStorage {
+                return box.publisher
+            } else {
+                let publisher = LiveViewFramePublisher(for: self)
+                liveViewPublisherStorage = LiveViewPublisherBox(publisher)
+                return publisher
+            }
+        }()
+
+        publisher.applyOptions(options)
         return publisher.eraseToAnyPublisher()
+    }
+
+    /// Apply the given options to the live view frame publisher.
+    ///
+    /// - Note: Since there is only one live view frame publisher per camera, options applied here will affect all
+    /// subscriptions to the camera's live view frame publisher.
+    ///
+    /// - Parameter options: The options to apply. Options not present will not be modified.
+    func applyLiveViewOptions(_ options: [LiveViewOption: Bool]) {
+        if let box = liveViewPublisherStorage {
+            box.publisher.applyOptions(options)
+        } else {
+            let publisher = LiveViewFramePublisher(for: self)
+            publisher.applyOptions(options)
+            liveViewPublisherStorage = LiveViewPublisherBox(publisher)
+        }
     }
 }
 
@@ -105,10 +171,6 @@ fileprivate class LiveViewFramePublisher: Publisher {
      once the last subscriber is cancelled.
      */
 
-    // TODO:
-    // - Live view options
-    // - Test cases somehow
-
     init(for camera: CameraLiveView) {
         self.camera = camera
         self.internalQueue = DispatchQueue(label: "CascableCore Live View Combine Publisher",
@@ -139,6 +201,18 @@ fileprivate class LiveViewFramePublisher: Publisher {
         let subscription = LiveViewSubscription(subscriber: subscriber, publisher: self)
         synchronized(on: self, because: "Mutating subscriptions", { _fragile_subscriptions.add(subscription) })
         subscriber.receive(subscription: subscription)
+    }
+
+    // MARK: Options
+
+    private var liveViewOptions: [LiveViewOption: Bool] = [:]
+
+    func applyOptions(_ options: [LiveViewOption: Bool]) {
+        // We don't want to replace existing values.
+        options.forEach({ liveViewOptions[$0.key] = $0.value })
+        if let camera = camera, camera.liveViewStreamActive {
+            camera.applyStreamOptions(liveViewOptions.asCascableCoreLiveViewOptions)
+        }
     }
 
     // MARK: Camera API
@@ -174,7 +248,8 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
         Swift.print("Starting live view")
         camera.beginStream(delivery: deliveryHandler, deliveryQueue: internalQueue,
-                           options: [:], terminationHandler: terminationHandler)
+                           options: liveViewOptions.asCascableCoreLiveViewOptions,
+                           terminationHandler: terminationHandler)
     }
 
     private func endLiveViewSoon() {
