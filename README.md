@@ -40,7 +40,7 @@ For documentation on the new property API introduced with CascableCore 10.0, see
 
 ### Combine Publishers
 
-If you're a fan of [Combine](https://developer.apple.com/documentation/combine), this package provides a combine publisher for property values. 
+If you're a fan of [Combine](https://developer.apple.com/documentation/combine), this package provides a Combine publisher for property values and camera live view. 
 
 #### Basic Usage
 
@@ -73,6 +73,54 @@ camera.valuePublisher(for: .shutterSpeed)
         print("Exposure triangle values: \(shutter), \(aperture), \(iso)")
     }
 ```
+
+#### Live View
+
+Due to the nature of live view, its publisher has some usage considerations to be aware of. In particular: 
+
+- Starting and stopping live view is a very heavy, multi-second long operation.
+
+- Live view frames are very expensive to get, each requiring a round-trip to the hardware camera and a decent amount of CPU resources to decode. They can also come in very fast, sometimes faster than can be reasonably rendered on-screen.
+
+- There is only a single source of live view frames: the connected piece of camera hardware.
+
+With these limitations in mind, there can only be one Combine live view publisher per camera instance. Additional calls to the `liveViewPublisher` property or `liveViewPublisher(options:)` method will always return the same publisher for any given camera. This means that options applied to the publisher via `liveViewPublisher(options:)` or `applyLiveViewOptions(_:)` will affect all subscribers to a camera's live view publisher.
+
+To manage frame pacing and resource management, the live view publisher uses Combine's `Demand` concept. Unfortunately, Combine's default `.sink` and `.assign` subscriptions immediately issue an `.unlimited` amount of demand, and as such are very much discouraged for use with the live view publisher — without the ability to manage demand, the publisher has no choice but to continuously request new frames which can cause overly large amounts of CPU usage as well as buffer backfill if frames are coming in faster than they can be consumed. Unfortunately, Combine operators like `.throttle` don't manage demand in this way — `.throttle` simply drops values, so you'll be needlessly using a large amount of resources with a `.throttle` then a `.sink`.
+
+Using any subscription that issues an `.unlimited` demand will cause the live view publisher to print a warning message to the console.
+
+In order to mitigate this, `CascableCoreSwift` provides a new subscription method, very similar to `.sink`, that takes a completion handler to inform the subscription and publisher when it's appropriate to deliver more frames. To use it, call `.sinkWithReadyHandler` on a publisher, and make sure you call the ready handler when you're ready for more values. For example: 
+
+``` swift
+// In this example, we're processing the frame synchronously in the subscription closure.
+
+camera.liveViewPublisher(options: [.skipImageDecoding: true])
+    .receive(on: DispatchQueue.global(qos: .default))
+    .sinkWithReadyHandler { completion in
+        print("Live view ended with completion reason: \(completion)" )
+    } receiveValue: { frame, readyForNextFrame in
+        let result = processFrameSynchronously(frame)
+        readyForNextFrame()
+    }
+    
+// In this example, we're rendering the frame asynchronously and informing the subscription
+// when we're done and ready for another frame.
+
+camera.liveViewPublisher(options: [.skipImageDecoding: true])
+    .receive(on: DispatchQueue.global(qos: .default))
+    .sinkWithReadyHandler { completion in
+        print("Live view ended with completion reason: \(completion)" )
+    } receiveValue: { frame, readyForNextFrame in
+        let result = processFrameSynchronously(frame)
+        DispatchQueue.main.async {
+            // Rendering an image to screen still takes some time.
+            self.renderProcessedFrameOnScreen(result)
+            readyForNextFrame()
+        }
+    }
+```
+
 
 ### Manual Camera Discovery
 

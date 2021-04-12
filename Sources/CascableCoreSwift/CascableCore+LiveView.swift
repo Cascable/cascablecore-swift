@@ -40,6 +40,9 @@ public extension Dictionary where Key == LiveViewOption, Value == Bool {
 public extension CameraLiveView {
 
     /// Returns the live view frame publisher for the camera without modifying any live view options.
+    ///
+    /// - Important: Frames will be generated on an arbitrary background queue. Use an explicit Combine scheduler to
+    ///              get them where they need to be.
     @available(iOS 13.0, macOS 10.15, *)
     var liveViewPublisher: AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
         return liveViewPublisher(options: [:])
@@ -48,22 +51,16 @@ public extension CameraLiveView {
     /// Returns the live view frame publisher for the camera, applying the given options.
     ///
     /// - Note: Since there is only one live view frame publisher per camera, options applied here will affect other
-    /// subscriptions to the camera's live view frame publisher. Use the `liveViewPublisher` to get the publisher
-    /// without affecting others, or pass an empty dictionary here.
+    ///         subscriptions to the camera's live view frame publisher. Use the `liveViewPublisher` to get the
+    ///         publisher without affecting others, or pass an empty dictionary here.
+    ///
+    /// - Important: Frames will be generated on an arbitrary background queue. Use an explicit Combine scheduler to
+    ///              get them where they need to be.
     ///
     /// - Parameter options: The options to apply.
     @available(iOS 13.0, macOS 10.15, *)
     func liveViewPublisher(options: [LiveViewOption: Bool]) -> AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
-        let publisher: LiveViewFramePublisher = {
-            if let box = liveViewPublisherStorage {
-                return box.publisher
-            } else {
-                let publisher = LiveViewFramePublisher(for: self)
-                liveViewPublisherStorage = LiveViewPublisherBox(publisher)
-                return publisher
-            }
-        }()
-
+        let publisher = getOrCreateLiveViewPublisher()
         publisher.applyOptions(options)
         return publisher.eraseToAnyPublisher()
     }
@@ -71,17 +68,11 @@ public extension CameraLiveView {
     /// Apply the given options to the live view frame publisher.
     ///
     /// - Note: Since there is only one live view frame publisher per camera, options applied here will affect all
-    /// subscriptions to the camera's live view frame publisher.
+    ///         subscriptions to the camera's live view frame publisher.
     ///
     /// - Parameter options: The options to apply. Options not present will not be modified.
     func applyLiveViewOptions(_ options: [LiveViewOption: Bool]) {
-        if let box = liveViewPublisherStorage {
-            box.publisher.applyOptions(options)
-        } else {
-            let publisher = LiveViewFramePublisher(for: self)
-            publisher.applyOptions(options)
-            liveViewPublisherStorage = LiveViewPublisherBox(publisher)
-        }
+        getOrCreateLiveViewPublisher().applyOptions(options)
     }
 }
 
@@ -133,6 +124,18 @@ public extension Publisher where Failure == Never {
 fileprivate var liveViewPublisherStorageObjCHandle: UInt8 = 0
 
 fileprivate extension CameraLiveView {
+
+    // We only want one publisher per camera instance.
+    func getOrCreateLiveViewPublisher() -> LiveViewFramePublisher {
+        if let box = liveViewPublisherStorage {
+            return box.publisher
+        } else {
+            let publisher = LiveViewFramePublisher(for: self)
+            liveViewPublisherStorage = LiveViewPublisherBox(publisher)
+            return publisher
+        }
+    }
+
     private var liveViewPublisherStorage: LiveViewPublisherBox? {
         get { return objc_getAssociatedObject(self, &liveViewPublisherStorageObjCHandle) as? LiveViewPublisherBox }
         set { objc_setAssociatedObject(self, &liveViewPublisherStorageObjCHandle, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC) }
