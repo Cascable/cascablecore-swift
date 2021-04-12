@@ -62,22 +62,39 @@ public class LiveViewFramePublisher: Publisher {
     // - Test multiple subscribers
     // - Threading and thread safety
 
-    private weak var camera: CameraLiveView?
-
-    // TODO: I think this should be a weak array — subscriptions get cancelled on deinit? (double-check)
-    private var subscriptions: [LiveViewSubscriptionAPI] = []
-
     public init(for camera: CameraLiveView) {
         self.camera = camera
+        self.internalQueue = DispatchQueue(label: "CascableCore Live View Combine Publisher",
+                                           qos: .default, attributes: [], autoreleaseFrequency: .workItem,
+                                           target: .global(qos: .default))
     }
+
+    private weak var camera: CameraLiveView?
+    private let internalQueue: DispatchQueue
+
+    private var _fragile_subscriptions = NSHashTable<AnyObject>.weakObjects()
+    // NSHashTable doesn't like holding protocol types, even though they're declared `AnyObject` :(
+    private var activeSubscriptions: [LiveViewSubscriptionAPI] {
+        return synchronized(on: self, because: "Accessing subscribers", {
+            return _fragile_subscriptions.allObjects.compactMap({ $0 as? LiveViewSubscriptionAPI })
+        })
+    }
+
+    private func synchronized<T>(on lock: AnyObject, because reason: String, _ body: () throws -> T) rethrows -> T {
+        objc_sync_enter(lock)
+        defer { objc_sync_exit(lock) }
+        return try body()
+    }
+
+    // MARK: Publisher API
 
     public func receive<S>(subscriber: S) where S: Subscriber, S.Input == LiveViewFrame, S.Failure == LiveViewTerminationReason {
         let subscription = LiveViewSubscription(subscriber: subscriber, publisher: self)
-        subscriptions.append(subscription)
+        synchronized(on: self, because: "Mutating subscriptions", { _fragile_subscriptions.add(subscription) })
         subscriber.receive(subscription: subscription)
     }
 
-    // MARK: - Camera API
+    // MARK: Camera API
 
     private func startLiveView() {
         guard let camera = camera else {
@@ -95,88 +112,119 @@ public class LiveViewFramePublisher: Publisher {
             self?.handleLiveViewEnded(with: reason)
         }
 
-        camera.beginStream(delivery: deliveryHandler, deliveryQueue: .global(qos: .userInteractive),
+        Swift.print("Starting live view")
+        camera.beginStream(delivery: deliveryHandler, deliveryQueue: internalQueue,
                            options: [:], terminationHandler: terminationHandler)
     }
 
     private func endLiveView() {
         // TODO: We might want to be defensive about this being called multiple times.
+        Swift.print("Stopping live view")
         camera?.endStream()
     }
 
-    // MARK: - Internal API
+    // MARK: Internal API
 
     fileprivate func handleUpdatedDemandFromSubscription(_ demand: Subscribers.Demand) {
-        // What if we're already waiting for a frame?
-        Swift.print("Got updated demand: \(demand)")
+        synchronized(on: self, because: "Updated demand can come from multiple threads at once") {
 
-        guard totalCurrentDemand() > .zero else { return }
+            Swift.print("Got updated demand: \(demand)")
 
-        guard let camera = camera else {
-            handleLiveViewEnded(with: .failed)
-            return
-        }
+            let demand = totalCurrentDemand()
+            guard demand > .zero else { return }
+            if demand == .unlimited { complainAboutUnlimitedDemand() }
 
-        // TODO: liveViewStreamActive can be async, so we might want to be defensive about that.
-        if !camera.liveViewStreamActive {
-            startLiveView()
+            guard let camera = camera else {
+                handleLiveViewEnded(with: .failed)
+                return
+            }
 
-        } else if let handler = pendingNextFrameHandler {
-            // Live view is active and the camera is waiting for demand.
-            pendingNextFrameHandler = nil
-            handler()
-        } else {
-            // Live view is active and we're already waiting for a frame. Nothing to do.
+            // TODO: liveViewStreamActive can be async, so we might want to be defensive about that.
+            if !camera.liveViewStreamActive {
+                startLiveView()
+
+            } else if let handler = pendingNextFrameHandler {
+                // Live view is active and the camera is waiting for demand.
+                Swift.print("Requesting frame due to updated demand")
+                pendingNextFrameHandler = nil
+                handler()
+            } else {
+                // Live view is active and we're already waiting for a frame. Nothing to do.
+            }
         }
     }
 
     fileprivate func handleCancellationFromSubscription(_ subscription: LiveViewSubscriptionAPI) {
-        subscriptions.removeAll(where: { $0 === subscription })
-        if subscriptions.isEmpty { endLiveView() }
+        synchronized(on: self, because: "Mutating subscriptions") {
+            _fragile_subscriptions.remove(subscription)
+            if activeSubscriptions.isEmpty { endLiveView() }
+        }
     }
 
-    // MARK: - Cancellations
+    // MARK: Cancellations
 
     private func handleLiveViewEnded(with reason: LiveViewTerminationReason) {
-        subscriptions.forEach({ $0.deliverFailure(reason) })
+        activeSubscriptions.forEach({ $0.deliverLiveViewEndedReason(reason) })
     }
 
-    // MARK: - Handling Demand
+    // MARK: Handling Demand
 
     private func totalCurrentDemand() -> Subscribers.Demand {
-        subscriptions.reduce(Subscribers.Demand.none) { $0 + $1.currentDemand }
+        activeSubscriptions.reduce(Subscribers.Demand.none) { $0 + $1.currentDemand }
     }
 
     private var pendingNextFrameHandler: (() -> Void)? = nil
 
     private func distributeLiveViewFrame(_ frame: LiveViewFrame, nextFrameHandler: @escaping () -> Void) {
-        let remainingDemand = subscriptions
+        let remainingDemand = activeSubscriptions
             .filter({ $0.currentDemand > .zero })
             .reduce(into: .none) { $0 += $1.deliverFrame(frame) }
 
+        if remainingDemand == .unlimited { complainAboutUnlimitedDemand() }
+
         if remainingDemand > .none {
+            Swift.print("Requesting frame immediately after delivery due to continued demand")
             nextFrameHandler()
         } else {
-            assert(pendingNextFrameHandler == nil)
+            // Some cameras ignore the "ready for next frame" handler, so we can throw away old ones.
             pendingNextFrameHandler = nextFrameHandler
         }
     }
+
+    private var hasComplainedAboutUnlimitedDemand: Bool = false
+
+    private func complainAboutUnlimitedDemand() {
+        guard !hasComplainedAboutUnlimitedDemand else { return }
+        Swift.print("----- WARNING: Unlimited demand requested from a camera live view publisher -----")
+        Swift.print("Using most built-in subscribers (including .sink, .assign, etc) will immediately request unlimited")
+        Swift.print("demand from publishers. Unlimited demand means the camera live view publisher has no choice but to")
+        Swift.print("request frames as often as it can, which can cause serious performance problems if frames start")
+        Swift.print("coming in faster than your subscriber can render them. To avoid this, use a subscriber that doesn't")
+        Swift.print("issue unlimited demand. CascableCoreSwift provides two subscribers — .sinkWithReadyHandler and")
+        Swift.print(".sinkTargetingDeliveryRate — to handle this. This warning won't be output again.")
+        Swift.print("---------------------------------------------------------------------------------")
+        hasComplainedAboutUnlimitedDemand = true
+    }
 }
 
+// MARK: -
+
+// Type-erasure for `LiveViewSubscription`.
 fileprivate protocol LiveViewSubscriptionAPI: Combine.Subscription, AnyObject {
     /// Returns the current pending demand for the subscription.
     var currentDemand: Subscribers.Demand { get }
     /// Deliver a frame, returning the subscription's total pending demand _after_ the frame has been delivered.
     func deliverFrame(_ frame: LiveViewFrame) -> Subscribers.Demand
     /// Deliver a live view ended event to the subscriber.
-    func deliverFailure(_ reason: LiveViewTerminationReason)
+    func deliverLiveViewEndedReason(_ reason: LiveViewTerminationReason)
 }
 
+// A subscription to the live view publisher. Very simple — most logic is in the publisher.
 fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, LiveViewSubscriptionAPI
     where Subscriber: Combine.Subscriber, Subscriber.Failure == LiveViewTerminationReason, Subscriber.Input == LiveViewFrame {
 
     private let subscriber: Subscriber
-    private var publisher: LiveViewFramePublisher?
+    private weak var publisher: LiveViewFramePublisher?
 
     fileprivate init(subscriber: Subscriber, publisher: LiveViewFramePublisher) {
         self.subscriber = subscriber
@@ -196,7 +244,7 @@ fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, 
         return currentDemand
     }
 
-    func deliverFailure(_ reason: LiveViewTerminationReason) {
+    func deliverLiveViewEndedReason(_ reason: LiveViewTerminationReason) {
         subscriber.receive(completion: reason == .endedNormally ? .finished : .failure(reason))
     }
 
@@ -205,5 +253,103 @@ fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, 
     }
 }
 
+// MARK: - Custom Subscribers
 
+public extension Publisher {
 
+    func sinkWithReadyHandler(receiveCompletion: @escaping DemandOnReadyHandlerSubscriber<Output, Failure>.CompletionDelivery,
+                              receiveValue: @escaping DemandOnReadyHandlerSubscriber<Output, Failure>.ValueDelivery) -> AnyCancellable {
+
+        let subscriber = DemandOnReadyHandlerSubscriber(receiveCompletion: receiveCompletion, receiveValue: receiveValue)
+        subscribe(subscriber)
+        return AnyCancellable(subscriber)
+    }
+}
+
+public extension Publisher where Failure == Never {
+
+    func sinkWithReadyHandler(receiveValue: @escaping DemandOnReadyHandlerSubscriber<Output, Failure>.ValueDelivery) -> AnyCancellable {
+        let subscriber = DemandOnReadyHandlerSubscriber<Output, Failure>(receiveValue: receiveValue)
+        subscribe(subscriber)
+        return AnyCancellable(subscriber)
+    }
+}
+
+public class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancellable where Failure: Error {
+    public typealias ValueDelivery = (_ value: Input, _ readyForMoreValues: @escaping () -> Void) -> Void
+    public typealias CompletionDelivery = (Subscribers.Completion<Failure>) -> Void
+
+    init(receiveCompletion: @escaping CompletionDelivery, receiveValue: @escaping ValueDelivery) where Failure: Error {
+        self.receiveValue = receiveValue
+        self.receiveCompletion = receiveCompletion
+    }
+
+    init(receiveValue: @escaping ValueDelivery) where Failure == Never {
+        self.receiveValue = receiveValue
+        self.receiveCompletion = { _ in }
+    }
+
+    deinit { cancel() }
+
+    // MARK: Receiving Values
+
+    private(set) var receiveValue: ValueDelivery
+    private(set) var receiveCompletion: CompletionDelivery
+    private var subscription: Subscription?
+
+    public func receive(subscription: Subscription) {
+        self.subscription = subscription
+        // We always want to request some demand when subscribing, otherwise we'll
+        // never have an opportunity to request more.
+        subscription.request(.max(1))
+    }
+
+    public func receive(_ input: Input) -> Subscribers.Demand {
+        receiveValue(input, { [weak self] in
+            #if DEBUG
+            self?.resetCompletionHandlerWarning()
+            #endif
+            self?.subscription?.request(.max(1))
+        })
+        #if DEBUG
+        startCompletionHandlerMisuseTimer()
+        #endif
+        return .none
+    }
+
+    public func receive(completion: Subscribers.Completion<Failure>) where Failure: Error {
+        receiveCompletion(completion)
+    }
+
+    public func cancel() {
+        subscription?.cancel()
+        subscription = nil
+    }
+
+    // MARK: Debug
+
+    #if DEBUG
+    private var completionHandlerNotUsedWarningTimer: Timer?
+    private var hasComplainedAboutCompletionHandlerMisuse: Bool = false
+
+    private func resetCompletionHandlerWarning() {
+        completionHandlerNotUsedWarningTimer?.invalidate()
+        completionHandlerNotUsedWarningTimer = nil
+    }
+
+    private func startCompletionHandlerMisuseTimer() {
+        guard !hasComplainedAboutCompletionHandlerMisuse else { return }
+        resetCompletionHandlerWarning()
+        completionHandlerNotUsedWarningTimer = Timer.init(timeInterval: 5.0, repeats: false, block: { [weak self] timer in
+            Swift.print("----- WARNING: Ready handler closure not called after 5 seconds -----")
+            Swift.print("Using the .sinkWithReadyHandler operator on Publisher requires that the ready handler closure")
+            Swift.print("is called after a value delivery. If this closure is not called, no further demand will be")
+            Swift.print("issued, and no further values will be received. This warning won't be output again.")
+            Swift.print("--------------------------------------------------------------------")
+            self?.hasComplainedAboutCompletionHandlerMisuse = true
+        })
+        RunLoop.main.add(completionHandlerNotUsedWarningTimer!, forMode: .common)
+    }
+
+    #endif
+}
