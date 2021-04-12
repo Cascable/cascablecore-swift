@@ -5,8 +5,11 @@ import ObjectiveC
 
 extension LiveViewTerminationReason: Error {}
 
+// MARK: - Public API
+
 public extension CameraLiveView {
 
+    /// Returns the live view frame publisher for the camera.
     @available(iOS 13.0, macOS 10.15, *)
     var liveViewPublisher: AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
         if let box = liveViewPublisherStorage { return box.publisher.eraseToAnyPublisher() }
@@ -15,6 +18,51 @@ public extension CameraLiveView {
         return publisher.eraseToAnyPublisher()
     }
 }
+
+public extension Publisher {
+
+    /// Attaches a subscriber with closure-based and controlled demand behaviour.
+    ///
+    /// This method creates the subscriber and immediately requests a single value, prior to returning the subscriber.
+    /// The return value should be held, otherwise the stream will be canceled. To request more values, call the
+    /// `readyForMoreValues` closure provided by the `receiveValue` closure — doing so will request another value.
+    ///
+    /// - Parameters:
+    ///   - receiveCompletion: The closure to execute when the publisher completes.
+    ///   - receiveValue: The closure to execute on receipt of a value.
+    ///
+    /// - Returns: A cancellable instance, which you use when you end assignment of the received value.
+    ///            Deallocation of the result will tear down the subscription stream.
+    func sinkWithReadyHandler(receiveCompletion: @escaping (Subscribers.Completion<Failure>) -> Void,
+                              receiveValue: @escaping (_ value: Output, _ readyForMoreValues: @escaping () -> Void) -> Void) -> AnyCancellable {
+
+        let subscriber = DemandOnReadyHandlerSubscriber(receiveCompletion: receiveCompletion, receiveValue: receiveValue)
+        subscribe(subscriber)
+        return AnyCancellable(subscriber)
+    }
+}
+
+public extension Publisher where Failure == Never {
+
+    /// Attaches a subscriber with closure-based and controlled demand behaviour.
+    ///
+    /// This method creates the subscriber and immediately requests a single value, prior to returning the subscriber.
+    /// The return value should be held, otherwise the stream will be canceled. To request more values, call the
+    /// `readyForMoreValues` closure provided by the `receiveValue` closure — doing so will request another value.
+    ///
+    /// - Parameters:
+    ///   - receiveValue: The closure to execute on receipt of a value.
+    ///
+    /// - Returns: A cancellable instance, which you use when you end assignment of the received value.
+    ///            Deallocation of the result will tear down the subscription stream.
+    func sinkWithReadyHandler(receiveValue: @escaping (_ value: Output, _ readyForMoreValues: @escaping () -> Void) -> Void) -> AnyCancellable {
+        let subscriber = DemandOnReadyHandlerSubscriber<Output, Failure>(receiveValue: receiveValue)
+        subscribe(subscriber)
+        return AnyCancellable(subscriber)
+    }
+}
+
+// MARK: - Camera Implementation Details
 
 fileprivate var liveViewPublisherStorageObjCHandle: UInt8 = 0
 
@@ -32,11 +80,13 @@ fileprivate class LiveViewPublisherBox: NSObject {
     }
 }
 
+// MARK: - Custom Combine Types
+
 /// A Combine publisher that delivers live view frames.
 @available(iOS 13.0, macOS 10.15, *)
-public class LiveViewFramePublisher: Publisher {
-    public typealias Output = LiveViewFrame
-    public typealias Failure = LiveViewTerminationReason
+fileprivate class LiveViewFramePublisher: Publisher {
+    typealias Output = LiveViewFrame
+    typealias Failure = LiveViewTerminationReason
 
     /*
      Camera live view is a _very_ heavy operation, and there's only one physical camera that's supplying frames.
@@ -57,12 +107,9 @@ public class LiveViewFramePublisher: Publisher {
 
     // TODO:
     // - Live view options
-    // - Good documentation
     // - Test cases somehow
-    // - Test multiple subscribers
-    // - Threading and thread safety
 
-    public init(for camera: CameraLiveView) {
+    init(for camera: CameraLiveView) {
         self.camera = camera
         self.internalQueue = DispatchQueue(label: "CascableCore Live View Combine Publisher",
                                            qos: .default, attributes: [], autoreleaseFrequency: .workItem,
@@ -88,7 +135,7 @@ public class LiveViewFramePublisher: Publisher {
 
     // MARK: Publisher API
 
-    public func receive<S>(subscriber: S) where S: Subscriber, S.Input == LiveViewFrame, S.Failure == LiveViewTerminationReason {
+    func receive<S>(subscriber: S) where S: Subscriber, S.Input == LiveViewFrame, S.Failure == LiveViewTerminationReason {
         let subscription = LiveViewSubscription(subscriber: subscriber, publisher: self)
         synchronized(on: self, because: "Mutating subscriptions", { _fragile_subscriptions.add(subscription) })
         subscriber.receive(subscription: subscription)
@@ -96,20 +143,33 @@ public class LiveViewFramePublisher: Publisher {
 
     // MARK: Camera API
 
+    // Starting and ending live view are async processes that can take some time (multiple seconds). To avoid
+    // multiple subscribers trying to start/end live view multiple times, we put a flag against them.
+    private var isStartingLiveView: Bool = false
+    private var isEndingLiveView: Bool = false
+
     private func startLiveView() {
         guard let camera = camera else {
             handleLiveViewEnded(with: .failed)
             return
         }
 
+        guard !isStartingLiveView else { return }
+        isStartingLiveView = true
+
         assert(!camera.liveViewStreamActive)
 
         let deliveryHandler: LiveViewFrameDelivery = { [weak self] frame, readyForNextFrame in
-            self?.distributeLiveViewFrame(frame, nextFrameHandler: readyForNextFrame)
+            guard let self = self else { return }
+            if self.isStartingLiveView { self.isStartingLiveView = false }
+            self.distributeLiveViewFrame(frame, nextFrameHandler: readyForNextFrame)
         }
 
         let terminationHandler: LiveViewTerminationHandler = { [weak self] reason, error in
-            self?.handleLiveViewEnded(with: reason)
+            guard let self = self else { return }
+            if self.isStartingLiveView { self.isStartingLiveView = false }
+            if self.isEndingLiveView { self.isEndingLiveView = false }
+            self.handleLiveViewEnded(with: reason)
         }
 
         Swift.print("Starting live view")
@@ -117,18 +177,29 @@ public class LiveViewFramePublisher: Publisher {
                            options: [:], terminationHandler: terminationHandler)
     }
 
-    private func endLiveView() {
-        // TODO: We might want to be defensive about this being called multiple times.
-        Swift.print("Stopping live view")
-        camera?.endStream()
+    private func endLiveViewSoon() {
+        // Because stopping/starting live view is _such_ a heavy operation, we want to guard against the case
+        // where clients rebuilding their subscribers (i.e., by removing and immediately re-adding subscribers)
+        // causes a big interruption in live view frames.
+        guard let camera = camera else { return }
+        guard !isEndingLiveView else { return }
+        isEndingLiveView = true
+        Swift.print("Stopping live view soon…")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            if self.activeSubscriptions.isEmpty {
+                Swift.print("…live view stopped.")
+                camera.endStream()
+            } else {
+                Swift.print("…live view stop aborted due to new subscribers.")
+            }
+        }
     }
 
     // MARK: Internal API
 
-    fileprivate func handleUpdatedDemandFromSubscription(_ demand: Subscribers.Demand) {
-        synchronized(on: self, because: "Updated demand can come from multiple threads at once") {
-
-            Swift.print("Got updated demand: \(demand)")
+    func handleUpdatedDemandFromSubscription(_ demand: Subscribers.Demand) {
+        synchronized(on: self, because: "Updated demand can come from multiple threads at once", {
 
             let demand = totalCurrentDemand()
             guard demand > .zero else { return }
@@ -139,26 +210,24 @@ public class LiveViewFramePublisher: Publisher {
                 return
             }
 
-            // TODO: liveViewStreamActive can be async, so we might want to be defensive about that.
             if !camera.liveViewStreamActive {
                 startLiveView()
 
             } else if let handler = pendingNextFrameHandler {
                 // Live view is active and the camera is waiting for demand.
-                Swift.print("Requesting frame due to updated demand")
                 pendingNextFrameHandler = nil
                 handler()
             } else {
                 // Live view is active and we're already waiting for a frame. Nothing to do.
             }
-        }
+        })
     }
 
-    fileprivate func handleCancellationFromSubscription(_ subscription: LiveViewSubscriptionAPI) {
-        synchronized(on: self, because: "Mutating subscriptions") {
+    func handleCancellationFromSubscription(_ subscription: LiveViewSubscriptionAPI) {
+        synchronized(on: self, because: "Mutating subscriptions", {
             _fragile_subscriptions.remove(subscription)
-            if activeSubscriptions.isEmpty { endLiveView() }
-        }
+            if activeSubscriptions.isEmpty { endLiveViewSoon() }
+        })
     }
 
     // MARK: Cancellations
@@ -183,7 +252,7 @@ public class LiveViewFramePublisher: Publisher {
         if remainingDemand == .unlimited { complainAboutUnlimitedDemand() }
 
         if remainingDemand > .none {
-            Swift.print("Requesting frame immediately after delivery due to continued demand")
+            // If we continue to have demand, immediately request a new frame.
             nextFrameHandler()
         } else {
             // Some cameras ignore the "ready for next frame" handler, so we can throw away old ones.
@@ -219,7 +288,7 @@ fileprivate protocol LiveViewSubscriptionAPI: Combine.Subscription, AnyObject {
     func deliverLiveViewEndedReason(_ reason: LiveViewTerminationReason)
 }
 
-// A subscription to the live view publisher. Very simple — most logic is in the publisher.
+// A subscription to the live view publisher. Very lightweight — most logic is in the publisher.
 fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, LiveViewSubscriptionAPI
     where Subscriber: Combine.Subscriber, Subscriber.Failure == LiveViewTerminationReason, Subscriber.Input == LiveViewFrame {
 
@@ -255,29 +324,9 @@ fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, 
 
 // MARK: - Custom Subscribers
 
-public extension Publisher {
-
-    func sinkWithReadyHandler(receiveCompletion: @escaping DemandOnReadyHandlerSubscriber<Output, Failure>.CompletionDelivery,
-                              receiveValue: @escaping DemandOnReadyHandlerSubscriber<Output, Failure>.ValueDelivery) -> AnyCancellable {
-
-        let subscriber = DemandOnReadyHandlerSubscriber(receiveCompletion: receiveCompletion, receiveValue: receiveValue)
-        subscribe(subscriber)
-        return AnyCancellable(subscriber)
-    }
-}
-
-public extension Publisher where Failure == Never {
-
-    func sinkWithReadyHandler(receiveValue: @escaping DemandOnReadyHandlerSubscriber<Output, Failure>.ValueDelivery) -> AnyCancellable {
-        let subscriber = DemandOnReadyHandlerSubscriber<Output, Failure>(receiveValue: receiveValue)
-        subscribe(subscriber)
-        return AnyCancellable(subscriber)
-    }
-}
-
-public class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancellable where Failure: Error {
-    public typealias ValueDelivery = (_ value: Input, _ readyForMoreValues: @escaping () -> Void) -> Void
-    public typealias CompletionDelivery = (Subscribers.Completion<Failure>) -> Void
+fileprivate class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancellable where Failure: Error {
+    typealias ValueDelivery = (_ value: Input, _ readyForMoreValues: @escaping () -> Void) -> Void
+    typealias CompletionDelivery = (Subscribers.Completion<Failure>) -> Void
 
     init(receiveCompletion: @escaping CompletionDelivery, receiveValue: @escaping ValueDelivery) where Failure: Error {
         self.receiveValue = receiveValue
@@ -289,7 +338,12 @@ public class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancell
         self.receiveCompletion = { _ in }
     }
 
-    deinit { cancel() }
+    deinit {
+        #if DEBUG
+        completionHandlerNotUsedWarningTimer?.invalidate()
+        #endif
+        cancel()
+    }
 
     // MARK: Receiving Values
 
@@ -297,14 +351,14 @@ public class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancell
     private(set) var receiveCompletion: CompletionDelivery
     private var subscription: Subscription?
 
-    public func receive(subscription: Subscription) {
+    func receive(subscription: Subscription) {
         self.subscription = subscription
         // We always want to request some demand when subscribing, otherwise we'll
         // never have an opportunity to request more.
         subscription.request(.max(1))
     }
 
-    public func receive(_ input: Input) -> Subscribers.Demand {
+    func receive(_ input: Input) -> Subscribers.Demand {
         receiveValue(input, { [weak self] in
             #if DEBUG
             self?.resetCompletionHandlerWarning()
@@ -317,11 +371,11 @@ public class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancell
         return .none
     }
 
-    public func receive(completion: Subscribers.Completion<Failure>) where Failure: Error {
+    func receive(completion: Subscribers.Completion<Failure>) where Failure: Error {
         receiveCompletion(completion)
     }
 
-    public func cancel() {
+    func cancel() {
         subscription?.cancel()
         subscription = nil
     }
@@ -350,6 +404,5 @@ public class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancell
         })
         RunLoop.main.add(completionHandlerNotUsedWarningTimer!, forMode: .common)
     }
-
     #endif
 }
