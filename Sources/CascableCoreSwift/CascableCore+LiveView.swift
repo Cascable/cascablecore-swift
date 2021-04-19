@@ -266,7 +266,9 @@ fileprivate class LiveViewFramePublisher: Publisher {
             if reason == .failed, error?.asCascableCoreError == .deviceBusy, retryCount < 5 {
                 // Some cameras don't like starting live view soon after being connected to. To handle
                 // this for our subscribers, we can retry a few times for them.
-                self?._unprotected_startLiveView(retryCount: retryCount + 1)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self?._unprotected_startLiveView(retryCount: retryCount + 1)
+                }
                 return
             }
 
