@@ -283,17 +283,20 @@ fileprivate class LiveViewFramePublisher: Publisher {
                            terminationHandler: terminationHandler)
     }
 
+    private var isWaitingToEndLiveView: Bool = false
     private func endLiveViewSoon() {
         // Because stopping/starting live view is _such_ a heavy operation, we want to guard against the case
         // where clients rebuilding their subscribers (i.e., by removing and immediately re-adding subscribers)
         // causes a big interruption in live view frames.
         guard let camera = camera else { return }
-        guard !isEndingLiveView else { return }
-        isEndingLiveView = true
+        guard !isWaitingToEndLiveView else { return }
+        isWaitingToEndLiveView = true
         Swift.print("Stopping live view soon…")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self = self else { return }
+            self.isWaitingToEndLiveView = false
             if self.activeSubscriptions.isEmpty {
+                self.isEndingLiveView = true
                 Swift.print("…live view is being stopped.")
                 camera.endStream()
             } else {
@@ -355,10 +358,8 @@ fileprivate class LiveViewFramePublisher: Publisher {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self = self else { return }
             self.synchronized(on: self, because: "Mutating subscribers", {
+                if self.isEndingLiveView { return } // If live view is ending again, we'll get to try again later.
                 guard !self._fragile_pendingSubscriptions.isEmpty else { return }
-                assert(self.isEndingLiveView == false)
-                assert(self.isStartingLiveView == false)
-
                 self._fragile_pendingSubscriptions.forEach({ self._fragile_subscriptions.add($0) })
                 self._fragile_pendingSubscriptions.removeAll()
 
