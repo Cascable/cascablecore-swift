@@ -195,6 +195,9 @@ fileprivate class LiveViewFramePublisher: Publisher {
         })
     }
 
+    // This is for subscriptions incoming while live view is being torn down.
+    private var _fragile_pendingSubscriptions: [LiveViewSubscriptionAPI] = []
+
     private func synchronized<T>(on lock: AnyObject, because reason: String, _ body: () throws -> T) rethrows -> T {
         objc_sync_enter(lock)
         defer { objc_sync_exit(lock) }
@@ -205,7 +208,17 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
     func receive<S>(subscriber: S) where S: Subscriber, S.Input == LiveViewFrame, S.Failure == LiveViewTerminationReason {
         let subscription = LiveViewSubscription(subscriber: subscriber, publisher: self)
-        synchronized(on: self, because: "Mutating subscriptions", { _fragile_subscriptions.add(subscription) })
+
+        synchronized(on: self, because: "Mutating subscriptions", {
+            if isEndingLiveView {
+                // If we're in the process of stopping live view, we need to wait for that to complete
+                // before we can accept subscribers/demand and start live view again.
+                _fragile_pendingSubscriptions.append(subscription)
+            } else {
+                _fragile_subscriptions.add(subscription)
+            }
+        })
+
         subscriber.receive(subscription: subscription)
     }
 
@@ -229,15 +242,19 @@ fileprivate class LiveViewFramePublisher: Publisher {
     private var isEndingLiveView: Bool = false
 
     private func startLiveView() {
+        guard !isStartingLiveView, let camera = camera else { return }
+        isStartingLiveView = true
+
+        assert(camera.liveViewStreamActive == false)
+        Swift.print("Starting live view")
+        _unprotected_startLiveView()
+    }
+
+    private func _unprotected_startLiveView(retryCount: Int = 0) {
         guard let camera = camera else {
             handleLiveViewEnded(with: .failed)
             return
         }
-
-        guard !isStartingLiveView else { return }
-        isStartingLiveView = true
-
-        assert(!camera.liveViewStreamActive)
 
         let deliveryHandler: LiveViewFrameDelivery = { [weak self] frame, readyForNextFrame in
             guard let self = self else { return }
@@ -246,13 +263,19 @@ fileprivate class LiveViewFramePublisher: Publisher {
         }
 
         let terminationHandler: LiveViewTerminationHandler = { [weak self] reason, error in
+            if reason == .failed, error?.asCascableCoreError == .deviceBusy, retryCount < 5 {
+                // Some cameras don't like starting live view soon after being connected to. To handle
+                // this for our subscribers, we can retry a few times for them.
+                self?._unprotected_startLiveView(retryCount: retryCount + 1)
+                return
+            }
+
             guard let self = self else { return }
             if self.isStartingLiveView { self.isStartingLiveView = false }
             if self.isEndingLiveView { self.isEndingLiveView = false }
             self.handleLiveViewEnded(with: reason)
         }
 
-        Swift.print("Starting live view")
         camera.beginStream(delivery: deliveryHandler, deliveryQueue: internalQueue,
                            options: liveViewOptions.asCascableCoreLiveViewOptions,
                            terminationHandler: terminationHandler)
@@ -266,10 +289,10 @@ fileprivate class LiveViewFramePublisher: Publisher {
         guard !isEndingLiveView else { return }
         isEndingLiveView = true
         Swift.print("Stopping live view soon…")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self = self else { return }
             if self.activeSubscriptions.isEmpty {
-                Swift.print("…live view stopped.")
+                Swift.print("…live view is being stopped.")
                 camera.endStream()
             } else {
                 Swift.print("…live view stop aborted due to new subscribers.")
@@ -279,8 +302,12 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
     // MARK: Internal API
 
-    func handleUpdatedDemandFromSubscription(_ demand: Subscribers.Demand) {
+    func handleUpdatedDemand(_ demand: Subscribers.Demand, from subscription: LiveViewSubscriptionAPI) {
         synchronized(on: self, because: "Updated demand can come from multiple threads at once", {
+            if _fragile_pendingSubscriptions.contains(where: { $0 === subscription }) {
+                // Ignore demand for pending subscriptions at the moment.
+                return
+            }
 
             let demand = totalCurrentDemand()
             guard demand > .zero else { return }
@@ -292,7 +319,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
             }
 
             if !camera.liveViewStreamActive {
-                startLiveView()
+                if !isStartingLiveView { startLiveView() }
 
             } else if let handler = pendingNextFrameHandler {
                 // Live view is active and the camera is waiting for demand.
@@ -307,6 +334,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
     func handleCancellationFromSubscription(_ subscription: LiveViewSubscriptionAPI) {
         synchronized(on: self, because: "Mutating subscriptions", {
             _fragile_subscriptions.remove(subscription)
+            _fragile_pendingSubscriptions.removeAll(where: { $0 === subscription })
             if activeSubscriptions.isEmpty { endLiveViewSoon() }
         })
     }
@@ -314,7 +342,30 @@ fileprivate class LiveViewFramePublisher: Publisher {
     // MARK: Cancellations
 
     private func handleLiveViewEnded(with reason: LiveViewTerminationReason) {
+        Swift.print("Live view stopped")
+        pendingNextFrameHandler = nil
         activeSubscriptions.forEach({ $0.deliverLiveViewEndedReason(reason) })
+
+        // If we have pending subscribers (i.e., subscriptions were added while live view was in the process
+        // of being stopped), we should check demand and restart live view if it's nonzero. However, since
+        // live view is a big, physical process doing so _immediately_ after we've been told it's stopped has
+        // a very high chance of failure. So, we wait a moment for things to "settle down" before restarting.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self = self else { return }
+            self.synchronized(on: self, because: "Mutating subscribers", {
+                guard !self._fragile_pendingSubscriptions.isEmpty else { return }
+                assert(self.isEndingLiveView == false)
+                assert(self.isStartingLiveView == false)
+
+                self._fragile_pendingSubscriptions.forEach({ self._fragile_subscriptions.add($0) })
+                self._fragile_pendingSubscriptions.removeAll()
+
+                if self.totalCurrentDemand() > .none, let subscriber = self.activeSubscriptions.first {
+                    Swift.print("Got demand while live view was stopping, so restarting it…")
+                    self.handleUpdatedDemand(self.totalCurrentDemand(), from: subscriber)
+                }
+            })
+        }
     }
 
     // MARK: Handling Demand
@@ -387,7 +438,7 @@ fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, 
 
     func request(_ demand: Subscribers.Demand) {
         currentDemand += demand
-        publisher?.handleUpdatedDemandFromSubscription(currentDemand)
+        publisher?.handleUpdatedDemand(currentDemand, from: self)
     }
 
     func deliverFrame(_ frame: LiveViewFrame) -> Subscribers.Demand {
