@@ -48,6 +48,14 @@ public extension CameraProperties {
 
 }
 
+public extension Camera {
+
+    /// Create a publisher for the camera's `focusInfo` property.
+    func focusInfoPublisher() -> AnyPublisher<FocusInfo?, Never> where Self: NSObject & Camera {
+        return publisher(for: \.focusInfo).eraseToAnyPublisher()
+    }
+}
+
 @available(iOS 13.0, macOS 10.15, *)
 public extension Publisher {
 
