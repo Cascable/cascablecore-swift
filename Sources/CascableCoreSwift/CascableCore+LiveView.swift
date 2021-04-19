@@ -246,7 +246,6 @@ fileprivate class LiveViewFramePublisher: Publisher {
         isStartingLiveView = true
 
         assert(camera.liveViewStreamActive == false)
-        Swift.print("Starting live view")
         _unprotected_startLiveView()
     }
 
@@ -291,16 +290,12 @@ fileprivate class LiveViewFramePublisher: Publisher {
         guard let camera = camera else { return }
         guard !isWaitingToEndLiveView else { return }
         isWaitingToEndLiveView = true
-        Swift.print("Stopping live view soon…")
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self = self else { return }
             self.isWaitingToEndLiveView = false
             if self.activeSubscriptions.isEmpty {
                 self.isEndingLiveView = true
-                Swift.print("…live view is being stopped.")
                 camera.endStream()
-            } else {
-                Swift.print("…live view stop aborted due to new subscribers.")
             }
         }
     }
@@ -347,7 +342,6 @@ fileprivate class LiveViewFramePublisher: Publisher {
     // MARK: Cancellations
 
     private func handleLiveViewEnded(with reason: LiveViewTerminationReason) {
-        Swift.print("Live view stopped")
         pendingNextFrameHandler = nil
         activeSubscriptions.forEach({ $0.deliverLiveViewEndedReason(reason) })
 
@@ -364,7 +358,6 @@ fileprivate class LiveViewFramePublisher: Publisher {
                 self._fragile_pendingSubscriptions.removeAll()
 
                 if self.totalCurrentDemand() > .none, let subscriber = self.activeSubscriptions.first {
-                    Swift.print("Got demand while live view was stopping, so restarting it…")
                     self.handleUpdatedDemand(self.totalCurrentDemand(), from: subscriber)
                 }
             })
