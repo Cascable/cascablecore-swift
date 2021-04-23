@@ -81,6 +81,11 @@ public extension Publisher {
      */
 
     /// Returns a publisher where the nested tuples are flattened into a single tuple.
+    func flatten<A, B>() -> Publishers.Map<Self, (A, B)> where Output == (A, B) {
+        map { tuple in (tuple.0, tuple.1) }
+    }
+
+    /// Returns a publisher where the nested tuples are flattened into a single tuple.
     func flatten<A, B, C>() -> Publishers.Map<Self, (A, B, C)> where Output == ((A, B), C) {
         map { tuple in (tuple.0.0, tuple.0.1, tuple.1) }
     }
