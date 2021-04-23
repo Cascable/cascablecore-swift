@@ -54,6 +54,11 @@ public extension Camera {
     func focusInfoPublisher() -> AnyPublisher<FocusInfo?, Never> where Self: NSObject & Camera {
         return publisher(for: \.focusInfo).eraseToAnyPublisher()
     }
+
+    /// Create a publisher for the camera's `autoexposureResult` property.
+    func autoexposureResultPublisher() -> AnyPublisher<AEResult?, Never> where Self: NSObject & Camera {
+        return publisher(for: \.autoexposureResult).eraseToAnyPublisher()
+    }
 }
 
 @available(iOS 13.0, macOS 10.15, *)
