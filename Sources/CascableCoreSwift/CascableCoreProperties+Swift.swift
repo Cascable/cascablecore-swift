@@ -227,7 +227,12 @@ public struct TypedCameraPropertyValue<CommonValueType: TypedCommonValue>: Equat
         return lhs.wrappedPropertyValue.isEqual(rhs.wrappedPropertyValue)
     }
 
-    init(wrapping propertyValue: PropertyValue, of type: TypedIdentifier<CommonValueType>) {
+    /// Inititalize a new typed property value.
+    ///
+    /// - Parameters:
+    ///   - propertyValue: The untyped camera property value, from CascableCore.
+    ///   - type: The typed property identifier for the value.
+    public init(wrapping propertyValue: PropertyValue, of type: TypedIdentifier<CommonValueType>) {
         localizedDisplayValue = propertyValue.localizedDisplayValue
         stringValue = propertyValue.stringValue
         opaqueValue = propertyValue.opaqueValue
