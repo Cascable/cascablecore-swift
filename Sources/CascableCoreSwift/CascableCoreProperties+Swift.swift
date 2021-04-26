@@ -47,6 +47,7 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
         camera = property.camera
         // ----- super.init() -----
         updateCurrentValue()
+        updatePendingValue()
         updateValidSettableValues()
         setupObservers(to: property)
     }
@@ -109,6 +110,10 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
     /// The current value of the property.
     private(set) public var currentValue: TypedCameraPropertyValue<CommonValueType>? = nil
 
+    /// The current "pending" value of the property. Set when `setValue(…)` is called, and cleared when the
+    /// `currentValue` becomes the set value.
+    private(set) public var pendingValue: TypedCameraPropertyValue<CommonValueType>? = nil
+
     /// The values that are considered valid for this property.
     private(set) public var validSettableValues: [TypedCameraPropertyValue<CommonValueType>] = []
 
@@ -165,10 +170,19 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
         backingPropertyObserverToken = property.addObserver({ [weak self] property, changeType in
             guard let self = self else { return }
             if changeType.contains(.value) { self.updateCurrentValue() }
+            if changeType.contains(.pendingValue) { self.updatePendingValue() }
             if changeType.contains(.validSettableValues) { self.updateValidSettableValues() }
             let observers = self.observerStorage.values
             observers.forEach({ $0(self, changeType) })
         })
+    }
+
+    private func updatePendingValue() {
+        if let value = wrappedProperty.pendingValue {
+            pendingValue = TypedCameraPropertyValue<CommonValueType>(wrapping: value, of: identifier)
+        } else {
+            pendingValue = nil
+        }
     }
 
     private func updateCurrentValue() {

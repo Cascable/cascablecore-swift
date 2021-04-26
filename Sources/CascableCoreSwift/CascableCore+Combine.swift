@@ -20,7 +20,7 @@ public extension CameraProperties {
                                            valueTranslation: { $0 }).eraseToAnyPublisher()
     }
 
-    /// Create a publisher for values of the given property identifier.
+    /// Create a publisher for the camera's value for the given property identifier.
     ///
     /// The created publisher will immediately emit the property's current value.
     ///
@@ -28,9 +28,23 @@ public extension CameraProperties {
     @available(iOS 13.0, macOS 10.15, *)
     func valuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
         AnyPublisher<TypedCameraPropertyValue<CommonValueType>?, Never> {
-
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .value,
                                            valueTranslation: { $0.currentValue }).eraseToAnyPublisher()
+    }
+
+    /// Create a publisher for the camera's "effective" value for the given property identifier.
+    ///
+    /// The effective value is the pending value (if present), otherwise the camera's current value. Using this
+    /// publisher removes the period of time between calling `setValue(…)` on a property and the value updating.
+    ///
+    /// The created publisher will immediately emit the property's current effective value.
+    ///
+    /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
+    @available(iOS 13.0, macOS 10.15, *)
+    func effectiveValuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
+    AnyPublisher<TypedCameraPropertyValue<CommonValueType>?, Never> {
+        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: [.value, .pendingValue],
+                                           valueTranslation: { $0.pendingValue ?? $0.currentValue }).eraseToAnyPublisher()
     }
 
     /// Create a publisher for the valid settable values of the given property identifier.
@@ -41,7 +55,6 @@ public extension CameraProperties {
     @available(iOS 13.0, macOS 10.15, *)
     func settableValuesPublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
             AnyPublisher<[TypedCameraPropertyValue<CommonValueType>], Never> {
-
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .validSettableValues,
                                            valueTranslation: { $0.validSettableValues }).eraseToAnyPublisher()
     }
@@ -169,7 +182,6 @@ public struct TypedPropertyValuePublisher<CommonValueType: TypedCommonValue, Pub
                 self.deliverValue(from: sender)
             })
 
-            // TODO: Do we want this?
             deliverValue(from: property)
         }
 
