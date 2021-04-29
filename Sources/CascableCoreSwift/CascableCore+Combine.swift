@@ -147,6 +147,16 @@ public extension Publisher {
     func flatten<A, B, C, D, E, F>() -> Publishers.Map<Self, (A, B, C, D, E, F)> where Output == (((((A, B), C), D), E), F) {
         map { tuple in (tuple.0.0.0.0.0, tuple.0.0.0.0.1, tuple.0.0.0.1, tuple.0.0.1, tuple.0.1, tuple.1) }
     }
+
+    /// Returns a publisher where the nested tuples are flattened into a single tuple.
+    func flatten<A, B, C, D, E, F, G>() -> Publishers.Map<Self, (A, B, C, D, E, F, G)> where Output == ((((((A, B), C), D), E), F), G) {
+        map { tuple in (tuple.0.0.0.0.0.0, tuple.0.0.0.0.0.1, tuple.0.0.0.0.1, tuple.0.0.0.1, tuple.0.0.1, tuple.0.1, tuple.1) }
+    }
+
+    /// Returns a publisher where the nested tuples are flattened into a single tuple.
+    func flatten<A, B, C, D, E, F, G, H>() -> Publishers.Map<Self, (A, B, C, D, E, F, G, H)> where Output == (((((((A, B), C), D), E), F), G), H) {
+        map { tuple in (tuple.0.0.0.0.0.0.0, tuple.0.0.0.0.0.0.1, tuple.0.0.0.0.0.1, tuple.0.0.0.0.1, tuple.0.0.0.1, tuple.0.0.1, tuple.0.1, tuple.1) }
+    }
 }
 
 /// A Combine publisher that delivers property values.
