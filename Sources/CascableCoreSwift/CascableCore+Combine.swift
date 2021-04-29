@@ -15,8 +15,8 @@ public extension CameraProperties {
     @available(iOS 13.0, macOS 10.15, *)
     func publisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
         AnyPublisher<TypedCameraProperty<CommonValueType>, Never> {
-
-        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: [.value, .validSettableValues],
+        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier),
+                                           on: [.value, .pendingValue, .validSettableValues],
                                            valueTranslation: { $0 }).eraseToAnyPublisher()
     }
 
@@ -32,6 +32,19 @@ public extension CameraProperties {
                                            valueTranslation: { $0.currentValue }).eraseToAnyPublisher()
     }
 
+    /// Create a publisher for the common value of the camera's value for the given property identifier.
+    ///
+    /// Useful for performing calculations on common values. The created publisher will immediately emit the
+    /// property's current common value.
+    ///
+    /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
+    @available(iOS 13.0, macOS 10.15, *)
+    func commonValuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
+        AnyPublisher<CommonValueType?, Never> {
+        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .value,
+                                           valueTranslation: { $0.currentValue?.commonValue }).eraseToAnyPublisher()
+    }
+
     /// Create a publisher for the camera's "effective" value for the given property identifier.
     ///
     /// The effective value is the pending value (if present), otherwise the camera's current value. Using this
@@ -45,6 +58,23 @@ public extension CameraProperties {
     AnyPublisher<TypedCameraPropertyValue<CommonValueType>?, Never> {
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: [.value, .pendingValue],
                                            valueTranslation: { $0.pendingValue ?? $0.currentValue }).eraseToAnyPublisher()
+    }
+
+    /// Create a publisher for the common value of the camera's "effective" value for the given property identifier.
+    ///
+    /// The effective value is the pending value (if present), otherwise the camera's current value. Using this
+    /// publisher removes the period of time between calling `setValue(…)` on a property and the value updating.
+    ///
+    /// Useful for performing calculations on common values. The created publisher will immediately emit the
+    /// property's current common value.
+    ///
+    /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
+    @available(iOS 13.0, macOS 10.15, *)
+    func effectiveCommonValuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
+        AnyPublisher<CommonValueType?, Never> {
+        return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: [.value, .pendingValue],
+                                           valueTranslation: { ($0.pendingValue ?? $0.currentValue)?.commonValue })
+            .eraseToAnyPublisher()
     }
 
     /// Create a publisher for the valid settable values of the given property identifier.
