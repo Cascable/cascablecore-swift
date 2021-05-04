@@ -27,9 +27,13 @@ public struct LiveViewOption: RawRepresentable, Hashable {
     ///
     /// When omitted from the options dictionary, the assumed value for this option is `false`.
     public static let favorHighFrameRate = LiveViewOption(rawValue: CBLLiveViewOptionFavorHighFrameRate)
+
+    /// If set, the publisher will target the given frame rate. This is a target, and not a guarantee. Value
+    /// can either be a numeric value in frames per second, or a `FrameRate` struct.
+    public static let maximumFramesPerSecond = LiveViewOption(rawValue: "MaximumFPS")
 }
 
-public extension Dictionary where Key == LiveViewOption, Value == Bool {
+public extension Dictionary where Key == LiveViewOption, Value == Any {
 
     /// Converts the dictionary of `LiveViewOption` into an ObjC/CascableCore-compatible options dictionary.
     var asCascableCoreLiveViewOptions: [String: Any] {
@@ -59,7 +63,7 @@ public extension CameraLiveView {
     ///
     /// - Parameter options: The options to apply.
     @available(iOS 13.0, macOS 10.15, *)
-    func liveViewPublisher(options: [LiveViewOption: Bool]) -> AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
+    func liveViewPublisher(options: [LiveViewOption: Any]) -> AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
         let publisher = getOrCreateLiveViewPublisher()
         publisher.applyOptions(options)
         return publisher.eraseToAnyPublisher()
@@ -72,7 +76,7 @@ public extension CameraLiveView {
     ///
     /// - Parameter options: The options to apply. Options not present will not be modified.
     @available(iOS 13.0, macOS 10.15, *)
-    func applyLiveViewOptions(_ options: [LiveViewOption: Bool]) {
+    func applyLiveViewOptions(_ options: [LiveViewOption: Any]) {
         getOrCreateLiveViewPublisher().applyOptions(options)
     }
 }
@@ -160,6 +164,26 @@ fileprivate class LiveViewFramePublisher: Publisher {
     typealias Output = LiveViewFrame
     typealias Failure = LiveViewTerminationReason
 
+    /// A target framerate.
+    struct FrameRate: Equatable {
+
+        /// A frame rate that is effectively unlimited in this context.
+        static let unlimited = FrameRate(fps: 1000.0)
+
+        /// Initialise a FrameRate with the given target frames per second.
+        init(fps: CGFloat) {
+            self.fps = fps
+        }
+
+        /// The receiver's target frames per second.
+        let fps: CGFloat
+
+        /// The receiver's frame time.
+        var frameTime: TimeInterval {
+            return TimeInterval(1.0 / fps)
+        }
+    }
+
     /*
      Camera live view is a _very_ heavy operation, and there's only one physical camera that's supplying frames.
      As such, most of the work is done in a centralised publisher object, rather than the logic being in the
@@ -224,13 +248,20 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
     // MARK: Options
 
-    private var liveViewOptions: [LiveViewOption: Bool] = [:]
+    private var liveViewOptions: [LiveViewOption: Any] = [:]
+    private(set) var targetFrameRate: FrameRate = .unlimited
 
-    func applyOptions(_ options: [LiveViewOption: Bool]) {
+    func applyOptions(_ options: [LiveViewOption: Any]) {
         // We don't want to replace existing values.
         options.forEach({ liveViewOptions[$0.key] = $0.value })
         if let camera = camera, camera.liveViewStreamActive {
             camera.applyStreamOptions(liveViewOptions.asCascableCoreLiveViewOptions)
+        }
+
+        if let rawFPS = liveViewOptions[.maximumFramesPerSecond] as? NSNumber {
+            targetFrameRate = FrameRate(fps: CGFloat(rawFPS.doubleValue))
+        } else if let frameRate = liveViewOptions[.maximumFramesPerSecond] as? FrameRate {
+            targetFrameRate = frameRate
         }
     }
 
@@ -321,10 +352,9 @@ fileprivate class LiveViewFramePublisher: Publisher {
             if !camera.liveViewStreamActive {
                 if !isStartingLiveView { startLiveView() }
 
-            } else if let handler = pendingNextFrameHandler {
+            } else if pendingNextFrameHandler != nil {
                 // Live view is active and the camera is waiting for demand.
-                pendingNextFrameHandler = nil
-                handler()
+                requestNextFrameWhenTargetFrameRateAllows()
             } else {
                 // Live view is active and we're already waiting for a frame. Nothing to do.
             }
@@ -371,6 +401,27 @@ fileprivate class LiveViewFramePublisher: Publisher {
     }
 
     private var pendingNextFrameHandler: (() -> Void)? = nil
+    private var lastFrameDeliveryDate: Date = .distantPast
+
+    private func requestNextFrameWhenTargetFrameRateAllows() {
+        guard let nextFrame = pendingNextFrameHandler else { return }
+
+        let now = Date()
+        let timeSinceLastFrame = now.timeIntervalSince(lastFrameDeliveryDate)
+        let targetFrameTime = targetFrameRate.frameTime
+
+        if timeSinceLastFrame >= targetFrameTime {
+            pendingNextFrameHandler = nil
+            lastFrameDeliveryDate = now
+            nextFrame()
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + (targetFrameTime - timeSinceLastFrame), execute: { [weak self] in
+                self?.pendingNextFrameHandler = nil
+                self?.lastFrameDeliveryDate = Date()
+                nextFrame()
+            })
+        }
+    }
 
     private func distributeLiveViewFrame(_ frame: LiveViewFrame, nextFrameHandler: @escaping () -> Void) {
         let remainingDemand = activeSubscriptions
@@ -379,12 +430,12 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
         if remainingDemand == .unlimited { complainAboutUnlimitedDemand() }
 
+        // Some cameras ignore the "ready for next frame" handler, so we can throw away old ones.
+        pendingNextFrameHandler = nextFrameHandler
+
         if remainingDemand > .none {
             // If we continue to have demand, immediately request a new frame.
-            nextFrameHandler()
-        } else {
-            // Some cameras ignore the "ready for next frame" handler, so we can throw away old ones.
-            pendingNextFrameHandler = nextFrameHandler
+            requestNextFrameWhenTargetFrameRateAllows()
         }
     }
 
