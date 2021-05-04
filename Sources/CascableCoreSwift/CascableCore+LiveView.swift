@@ -33,6 +33,26 @@ public struct LiveViewOption: RawRepresentable, Hashable {
     public static let maximumFramesPerSecond = LiveViewOption(rawValue: "MaximumFPS")
 }
 
+/// A target framerate for live view.
+public struct FrameRate: Equatable {
+
+    /// A frame rate that is effectively unlimited in this context.
+    public static let unlimited = FrameRate(fps: 1000.0)
+
+    /// Initialise a FrameRate with the given target frames per second.
+    public init(fps: Double) {
+        self.fps = fps
+    }
+
+    /// The receiver's target frames per second.
+    public let fps: Double
+
+    /// The receiver's frame time.
+    public var frameTime: TimeInterval {
+        return TimeInterval(1.0 / fps)
+    }
+}
+
 public extension Dictionary where Key == LiveViewOption, Value == Any {
 
     /// Converts the dictionary of `LiveViewOption` into an ObjC/CascableCore-compatible options dictionary.
@@ -164,26 +184,6 @@ fileprivate class LiveViewFramePublisher: Publisher {
     typealias Output = LiveViewFrame
     typealias Failure = LiveViewTerminationReason
 
-    /// A target framerate.
-    struct FrameRate: Equatable {
-
-        /// A frame rate that is effectively unlimited in this context.
-        static let unlimited = FrameRate(fps: 1000.0)
-
-        /// Initialise a FrameRate with the given target frames per second.
-        init(fps: CGFloat) {
-            self.fps = fps
-        }
-
-        /// The receiver's target frames per second.
-        let fps: CGFloat
-
-        /// The receiver's frame time.
-        var frameTime: TimeInterval {
-            return TimeInterval(1.0 / fps)
-        }
-    }
-
     /*
      Camera live view is a _very_ heavy operation, and there's only one physical camera that's supplying frames.
      As such, most of the work is done in a centralised publisher object, rather than the logic being in the
@@ -259,7 +259,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
         }
 
         if let rawFPS = liveViewOptions[.maximumFramesPerSecond] as? NSNumber {
-            targetFrameRate = FrameRate(fps: CGFloat(rawFPS.doubleValue))
+            targetFrameRate = FrameRate(fps: rawFPS.doubleValue)
         } else if let frameRate = liveViewOptions[.maximumFramesPerSecond] as? FrameRate {
             targetFrameRate = frameRate
         }
