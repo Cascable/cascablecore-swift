@@ -6,7 +6,7 @@ public extension Error {
     /// Returns the error expressed as a CascableCore error code, or `.generic` if the error doesn't appear to
     /// be a valid CascableCore error code.
     var asCascableCoreError: CascableCoreErrorCode {
-        guard let code = CascableCoreErrorCode(rawValue: UInt((self as NSError).code)) else { return .generic }
+        guard let code = CascableCoreErrorCode(rawValue: UInt(bitPattern: (self as NSError).code)) else { return .generic }
         // This nasty switch filters out the "@unknown default" case, since we can init ObjC-backed enums
         // with arbitrary values.
         switch code {
