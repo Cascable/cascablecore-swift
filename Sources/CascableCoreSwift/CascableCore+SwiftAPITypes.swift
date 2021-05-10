@@ -6,7 +6,7 @@ import CascableCore
 public typealias TypedCommonValue = Equatable & TranslateableFromObjCCommonValue
 
 /// A `TypedIdentifier` is a strongly-typed replacement for `CBLPropertyIdentifier`.
-public struct TypedIdentifier<CommonValueType: TypedCommonValue> {
+public struct TypedIdentifier<CommonValueType: TypedCommonValue>: Equatable {
     public let propertyIdentifier: PropertyIdentifier
 
     fileprivate init(identifier: PropertyIdentifier) {
