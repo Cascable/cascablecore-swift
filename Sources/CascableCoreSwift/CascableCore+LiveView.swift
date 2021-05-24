@@ -33,6 +33,28 @@ public struct LiveViewOption: RawRepresentable, Hashable {
     public static let maximumFramesPerSecond = LiveViewOption(rawValue: "MaximumFPS")
 }
 
+public enum LiveViewStreamTerminationReason: Error, Equatable {
+
+    public static func == (lhs: LiveViewStreamTerminationReason, rhs: LiveViewStreamTerminationReason) -> Bool {
+        switch (rhs, lhs) {
+        case (.alreadyStreaming, .alreadyStreaming): return true
+        case (.endedNormally, .endedNormally): return true
+        case (.failed(let lhsError), .failed(let rhsError)):
+            return lhsError.asCascableCoreError == rhsError.asCascableCoreError
+        default: return false
+        }
+    }
+
+    // The live view stream failed, due to disconnection or another failure.
+    case failed(error: Error)
+
+    /// The live view stream ended normally, due to mode switching or removal of all subscribers.
+    case endedNormally
+
+    /// The live view stream could not start because there is already a stream running from this camera.
+    case alreadyStreaming
+}
+
 /// A target framerate for live view.
 public struct FrameRate: Equatable {
 
@@ -68,7 +90,7 @@ public extension CameraLiveView {
     /// - Important: Frames will be generated on an arbitrary background queue. Use an explicit Combine scheduler to
     ///              get them where they need to be.
     @available(iOS 13.0, macOS 10.15, *)
-    var liveViewPublisher: AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
+    var liveViewPublisher: AnyPublisher<LiveViewFrame, LiveViewStreamTerminationReason> {
         return liveViewPublisher(options: [:])
     }
 
@@ -83,7 +105,7 @@ public extension CameraLiveView {
     ///
     /// - Parameter options: The options to apply.
     @available(iOS 13.0, macOS 10.15, *)
-    func liveViewPublisher(options: [LiveViewOption: Any]) -> AnyPublisher<LiveViewFrame, LiveViewTerminationReason> {
+    func liveViewPublisher(options: [LiveViewOption: Any]) -> AnyPublisher<LiveViewFrame, LiveViewStreamTerminationReason> {
         let publisher = getOrCreateLiveViewPublisher()
         publisher.applyOptions(options)
         return publisher.eraseToAnyPublisher()
@@ -182,7 +204,7 @@ fileprivate class LiveViewPublisherBox: NSObject {
 @available(iOS 13.0, macOS 10.15, *)
 fileprivate class LiveViewFramePublisher: Publisher {
     typealias Output = LiveViewFrame
-    typealias Failure = LiveViewTerminationReason
+    typealias Failure = LiveViewStreamTerminationReason
 
     /*
      Camera live view is a _very_ heavy operation, and there's only one physical camera that's supplying frames.
@@ -230,7 +252,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
     // MARK: Publisher API
 
-    func receive<S>(subscriber: S) where S: Subscriber, S.Input == LiveViewFrame, S.Failure == LiveViewTerminationReason {
+    func receive<S>(subscriber: S) where S: Subscriber, S.Input == LiveViewFrame, S.Failure == LiveViewStreamTerminationReason {
         let subscription = LiveViewSubscription(subscriber: subscriber, publisher: self)
 
         synchronized(on: self, because: "Mutating subscriptions", {
@@ -282,7 +304,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
     private func _unprotected_startLiveView(retryCount: Int = 0) {
         guard let camera = camera else {
-            handleLiveViewEnded(with: .failed)
+            handleLiveViewEnded(with: .failed(error: NSError(cblErrorCode: .notConnected)))
             return
         }
 
@@ -305,7 +327,17 @@ fileprivate class LiveViewFramePublisher: Publisher {
             guard let self = self else { return }
             if self.isStartingLiveView { self.isStartingLiveView = false }
             if self.isEndingLiveView { self.isEndingLiveView = false }
-            self.handleLiveViewEnded(with: reason)
+
+            let typedReason: LiveViewStreamTerminationReason = {
+                switch reason {
+                case .endedNormally: return .endedNormally
+                case .alreadyStreaming: return .alreadyStreaming
+                case .failed: return .failed(error: error ?? NSError(cblErrorCode: .genericProtocolFailure))
+                @unknown default: return .failed(error: NSError(cblErrorCode: .genericProtocolFailure))
+                }
+            }()
+
+            self.handleLiveViewEnded(with: typedReason)
         }
 
         camera.beginStream(delivery: deliveryHandler, deliveryQueue: internalQueue,
@@ -345,7 +377,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
             if demand == .unlimited { complainAboutUnlimitedDemand() }
 
             guard let camera = camera else {
-                handleLiveViewEnded(with: .failed)
+                handleLiveViewEnded(with: .failed(error: NSError(cblErrorCode: .notConnected)))
                 return
             }
 
@@ -371,7 +403,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
 
     // MARK: Cancellations
 
-    private func handleLiveViewEnded(with reason: LiveViewTerminationReason) {
+    private func handleLiveViewEnded(with reason: LiveViewStreamTerminationReason) {
         pendingNextFrameHandler = nil
         activeSubscriptions.forEach({ $0.deliverLiveViewEndedReason(reason) })
 
@@ -465,13 +497,15 @@ fileprivate protocol LiveViewSubscriptionAPI: Combine.Subscription, AnyObject {
     /// Deliver a frame, returning the subscription's total pending demand _after_ the frame has been delivered.
     func deliverFrame(_ frame: LiveViewFrame) -> Subscribers.Demand
     /// Deliver a live view ended event to the subscriber.
-    func deliverLiveViewEndedReason(_ reason: LiveViewTerminationReason)
+    func deliverLiveViewEndedReason(_ reason: LiveViewStreamTerminationReason)
 }
 
 // A subscription to the live view publisher. Very lightweight — most logic is in the publisher.
 @available(iOS 13.0, macOS 10.15, *)
 fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, LiveViewSubscriptionAPI
-    where Subscriber: Combine.Subscriber, Subscriber.Failure == LiveViewTerminationReason, Subscriber.Input == LiveViewFrame {
+    where Subscriber: Combine.Subscriber,
+          Subscriber.Failure == LiveViewStreamTerminationReason,
+          Subscriber.Input == LiveViewFrame {
 
     private let subscriber: Subscriber
     private weak var publisher: LiveViewFramePublisher?
@@ -494,7 +528,7 @@ fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, 
         return currentDemand
     }
 
-    func deliverLiveViewEndedReason(_ reason: LiveViewTerminationReason) {
+    func deliverLiveViewEndedReason(_ reason: LiveViewStreamTerminationReason) {
         subscriber.receive(completion: reason == .endedNormally ? .finished : .failure(reason))
     }
 
