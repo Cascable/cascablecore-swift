@@ -102,6 +102,11 @@ public extension Camera {
     func autoexposureResultPublisher() -> AnyPublisher<AEResult?, Never> where Self: NSObject & Camera {
         return publisher(for: \.autoexposureResult).eraseToAnyPublisher()
     }
+
+    /// Create a publisher for the camera's `supportedFunctionality` property.
+    func supportedFunctionalityPublisher() -> AnyPublisher<SupportedFunctionality, Never> where Self: NSObject & Camera {
+        return publisher(for: \.supportedFunctionality).eraseToAnyPublisher()
+    }
 }
 
 @available(iOS 13.0, macOS 10.15, *)
