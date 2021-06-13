@@ -3,11 +3,11 @@
     "pins": [
       {
         "package": "CascableCore",
-        "repositoryURL": "git@github.com:Cascable/cascablecore-spm-testing",
+        "repositoryURL": "git@github.com:Cascable/cascablecore-distribution",
         "state": {
-          "branch": "master",
-          "revision": "b95b103fed9434676384c14f4e620f75e9b5a933",
-          "version": null
+          "branch": null,
+          "revision": "ff3fbf51c9bc816248c6b4b93523c3a06442ef9e",
+          "version": "10.0.0-rc"
         }
       }
     ]

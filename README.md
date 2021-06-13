@@ -1,8 +1,6 @@
 ## CascableCoreSwift
 
-CascableCoreSwift is a Swift package that provides a better, more "Swift-y" API for [CascableCore](https://github.com/cascable/cascablecore-binaries/).
-
-This package is currently in very early alpha, and depends on an alpha version of CascableCore.
+CascableCoreSwift is a Swift package that provides a better, more "Swift-y" API for [CascableCore](https://github.com/cascable/cascablecore-distribution/).
 
 ### Strongly-Typed Property API
 
