@@ -6,8 +6,8 @@
         "repositoryURL": "git@github.com:Cascable/cascablecore-distribution",
         "state": {
           "branch": null,
-          "revision": "ff3fbf51c9bc816248c6b4b93523c3a06442ef9e",
-          "version": "10.0.0-rc"
+          "revision": "b880e57274001bd92523bf2cff4af57f5b45a97a",
+          "version": "10.0.1"
         }
       }
     ]
