@@ -1,6 +1,13 @@
 ## CascableCoreSwift
 
-CascableCoreSwift is a Swift package that provides a better, more "Swift-y" API for [CascableCore](https://github.com/cascable/cascablecore-distribution/).
+CascableCoreSwift is a Swift package that provides better, more "Swift-y" APIs for [CascableCore](https://github.com/cascable/cascablecore-distribution/) — an SDK for working with over 200 models of WiFi-enabled DSLR and mirrorless cameras. This package is additive in that it adds to the existing CascableCore APIs rather than replacing it.
+
+- For more information on the CascableCore product, including getting a trial license, see the [Cascable Developer Portal](https://developer.cascable.se/).
+
+- The best starting point for working with the SDK is by seeing CascableCore in action by checking out the [CascableCore Demo Projects](https://github.com/Cascable/cascablecore-demo) repository. You'll need a trial license for it to do anything useful!
+
+- Next, our [Getting Started With CascableCore](https://github.com/Cascable/cascablecore-demo/blob/master/Getting%20Started%20With%20CascableCore.md) document contains discussion about the CascableCore APIs and concepts in the order in which you're likely to encounter them. These APIs and concepts are equally important for both Objective-C and Swift developers.
+
 
 ### Strongly-Typed Property API
 
