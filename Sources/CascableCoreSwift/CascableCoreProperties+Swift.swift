@@ -200,7 +200,7 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
     }
 }
 
-extension TypedCameraProperty where CommonValueType: ExposureCompensationValue {
+public extension TypedCameraProperty where CommonValueType: ExposureCompensationValue {
 
     /// Returns the item value in `validSettableValues` that is considered the "zero" value.
     /// For most properties this will be the first item in the array, but in some (for example,
@@ -218,7 +218,7 @@ extension TypedCameraProperty where CommonValueType: ExposureCompensationValue {
     }
 }
 
-extension TypedCameraProperty where CommonValueType: ISOValue {
+public extension TypedCameraProperty where CommonValueType: ISOValue {
 
     /// Returns the value in `validSettableValues` that, when set, will cause the camera to
     /// attempt to derive the value for this property automatically.
