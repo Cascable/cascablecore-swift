@@ -210,11 +210,9 @@ public extension TypedCameraProperty where CommonValueType: ExposureCompensation
     /// be negative. This can be useful when constructing UI.
 
     /// Guaranteed to return a non-nil value if `validSettableValues` isn't empty.
-
-    var validZeroValue: TypedCameraPropertyValue<ExposureCompensationValue>? {
-        guard let exposureCompensations = validSettableValues as? [TypedCameraPropertyValue<ExposureCompensationValue>] else { return nil }
+    var validZeroValue: TypedCameraPropertyValue<CommonValueType>? {
         let zeroEV = ExposureCompensationValue.zeroEV
-        return exposureCompensations.first(where: { $0.commonValue == zeroEV })
+        return validSettableValues.first(where: { $0.commonValue == zeroEV })
     }
 }
 
@@ -224,10 +222,9 @@ public extension TypedCameraProperty where CommonValueType: ISOValue {
     /// attempt to derive the value for this property automatically.
     ///
     /// If there is no such value, returns `nil`.
-    var validAutomaticValue: TypedCameraPropertyValue<ISOValue>? {
-        guard let isos = validSettableValues as? [TypedCameraPropertyValue<ISOValue>] else { return nil }
+    var validAutomaticValue: TypedCameraPropertyValue<CommonValueType>? {
         let autoISO = ISOValue.automaticISO
-        return isos.first(where: { $0.commonValue == autoISO })
+        return validSettableValues.first(where: { $0.commonValue == autoISO })
     }
 }
 
