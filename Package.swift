@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "CascableCoreSwift", targets: ["CascableCoreSwift"])
     ],
     dependencies: [
-        .package(name: "CascableCore", url: "git@github.com:Cascable/cascablecore-distribution", .exact("10.1.0"))
+        .package(name: "CascableCore", url: "git@github.com:Cascable/cascablecore-distribution", .exact("10.1.1"))
     ],
     targets: [
         .target(name: "CascableCoreSwift", dependencies: ["CascableCore"]),
