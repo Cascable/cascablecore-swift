@@ -45,7 +45,7 @@ For documentation on the new property API introduced with CascableCore 10.0, see
 
 ### Combine Publishers
 
-If you're a fan of [Combine](https://developer.apple.com/documentation/combine), this package provides a Combine publisher for property values and camera live view. 
+If you're a fan of [Combine](https://developer.apple.com/documentation/combine), this package provides Combine publishers for property values, camera live view, and other miscellaneous camera state. 
 
 #### Basic Usage
 
@@ -64,6 +64,18 @@ camera.valuePublisher(for: .shutterSpeed).sink { shutterSpeed in
 camera.settableValuesPublisher(for: .shutterSpeed).sink { shutterSpeeds in 
     // Fires whenever the valid settable values change.
     print("Valid shutter speeds are: \(shutterSpeeds.compactMap({ $0.localizedDisplayValue }))")
+}
+```
+
+Also added are a few convenience publishers for various camera state properties. You can find them all in `CascableCore+Combine.swift`.
+
+``` swift
+camera.videoRecordingStatePublisher().sink { recordingState in
+    switch recordingState {
+    case .notRecording: label.text = "Not Recording"
+    case .recording(let timer?): label.text = "Recording: \(timer.asMinutesAndSeconds)"
+    case .recording(_): label.text = "Recording"
+    }
 }
 ```
 

@@ -107,6 +107,14 @@ public extension Camera {
     func supportedFunctionalityPublisher() -> AnyPublisher<SupportedFunctionality, Never> where Self: NSObject & Camera {
         return publisher(for: \.supportedFunctionality).eraseToAnyPublisher()
     }
+
+    /// Create a publisher for the camera's `videoRecordingState` property.
+    func videoRecordingStatePublisher() -> AnyPublisher<VideoRecordingState, Never> where Self: NSObject & Camera {
+        return publisher(for: \.isRecordingVideo, options: [.initial, .new])
+            .combineLatest(publisher(for: \.currentVideoTimerValue, options: [.initial, .new]))
+            .map { [weak self] in self?._videoRecordingState(from: $0, timer: $1) ?? .notRecording }
+            .eraseToAnyPublisher()
+    }
 }
 
 @available(iOS 13.0, macOS 10.15, *)

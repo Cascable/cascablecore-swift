@@ -29,6 +29,12 @@ public extension Error {
         case .unsupportedFileFormat: return .unsupportedFileFormat
         case .noMetadata: return .noMetadata
         case .needsNewPairing: return .needsNewPairing
+        case .videoRecordingInProgress: return .videoRecordingInProgress
+        case .requiresPhysicalInteraction: return .requiresPhysicalInteraction
+        case .disallowedOnCurrentTransport: return .disallowedOnCurrentTransport
+        case .requiresLiveView: return .requiresLiveView
+        case .cardError: return .cardError
+        case .storageFull: return .storageFull
         @unknown default: return .generic
         }
     }
