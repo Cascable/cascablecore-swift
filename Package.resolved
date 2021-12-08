@@ -3,7 +3,7 @@
     "pins": [
       {
         "package": "CascableCore",
-        "repositoryURL": "git@github.com:Cascable/cascablecore-distribution",
+        "repositoryURL": "https://github.com/Cascable/cascablecore-distribution",
         "state": {
           "branch": null,
           "revision": "cb4971b83a3cf85c5560dbc954f606b27dee2097",
