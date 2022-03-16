@@ -105,19 +105,24 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
         observerStorage.removeValue(forKey: ourObserver.internalToken)
     }
 
-    // MARK: - Getting and Setting Values
+    // MARK: - Getting Values
 
     /// The current value of the property.
     private(set) public var currentValue: TypedCameraPropertyValue<CommonValueType>? = nil
 
+    /// How values are set.
+    private(set) public var valueSetType: PropertyValueSetType = []
+
+    // MARK: - Setting Values: Enumerations
+
     /// The current "pending" value of the property. Set when `setValue(…)` is called, and cleared when the
-    /// `currentValue` becomes the set value.
+    /// `currentValue` becomes the set value. Only valid when `valueSetType` contains `.enumeration`.
     private(set) public var pendingValue: TypedCameraPropertyValue<CommonValueType>? = nil
 
-    /// The values that are considered valid for this property.
+    /// The values that are considered valid for this property. Only valid when `valueSetType` contains `.enumeration`.
     private(set) public var validSettableValues: [TypedCameraPropertyValue<CommonValueType>] = []
 
-    /// Attempt to find a valid settable value for the given common value.
+    /// Attempt to find a valid settable value for the given common value. Only valid when `valueSetType` contains `.enumeration`.
     ///
     /// - Parameter commonValue: The common value to find a value for.
     /// - Returns: Returns a valid settable value for the given target, or `nil` if no value matches.
@@ -125,7 +130,8 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
         return validSettableValues.first(where: { $0.commonValue == commonValue })
     }
 
-    /// Attempt to set a new value for the property. The value must be in the `validSettableValues` property.
+    /// Attempt to set a new value for the property. The value must be in the `validSettableValues` property. Only
+    /// valid when `valueSetType` contains `.enumeration`.
     ///
     /// - Parameters:
     ///   - newValue: The value to set.
@@ -134,6 +140,42 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
     public func setValue(_ newValue: TypedCameraPropertyValue<CommonValueType>, completionQueue: DispatchQueue = .main,
                   completionHandler: @escaping ErrorableOperationCallback) {
         wrappedProperty.setValue(newValue.wrappedPropertyValue, completionQueue: completionQueue, completionHandler: completionHandler)
+    }
+
+    // MARK: Setting Values: Stepping
+
+    /// Increment the property's value by one step. Only useable if the property's `valueSetType` contains `.stepping`.
+    ///
+    /// - Note: If you're constructing a UI in a left-to-right locale (such as English) like this, this method should
+    /// be called when the user taps on the right arrow: `[<] f/2.8 [>]`, or the down arrow: `[↑] f/2.8 [↓]`. In other
+    /// words, this method is moving the value towards the end of a list of values.
+    ///
+    /// - Parameters:
+    ///   - completionQueue: The queue on which to call the completion handler.
+    ///   - completionHandler: The completion handler to call when the operation succeeds or fails.
+    public func incrementValue(completionQueue: DispatchQueue = .main, completionHandler: @escaping ErrorableOperationCallback) {
+        guard valueSetType.contains(.stepping) else {
+            completionQueue.async { completionHandler(NSError(cblErrorCode: .notAvailable)) }
+            return
+        }
+        wrappedProperty.incrementValue(completionQueue: completionQueue, completionHandler: completionHandler)
+    }
+
+    /// Decrement the property's value by one step. Only useable if the property's `valueSetType` contains `.stepping`.
+    ///
+    /// - Note: If you're constructing a UI in a left-to-right locale (such as English) like this, this method should
+    /// be called when the user taps on the left arrow: `[<] f/2.8 [>]`, or the up arrow: `[↑] f/2.8 [↓]`. In other
+    /// words, this method is moving the value towards the beginning of a list of values.
+    ///
+    /// - Parameters:
+    ///   - completionQueue: The queue on which to call the completion handler.
+    ///   - completionHandler: The completion handler to call when the operation succeeds or fails.
+    public func decrementValue(completionQueue: DispatchQueue = .main, completionHandler: @escaping ErrorableOperationCallback) {
+        guard valueSetType.contains(.stepping) else {
+            completionQueue.async { completionHandler(NSError(cblErrorCode: .notAvailable)) }
+            return
+        }
+        wrappedProperty.decrementValue(completionQueue: completionQueue, completionHandler: completionHandler)
     }
 
     // MARK: - Convenience Getters
@@ -194,6 +236,7 @@ public class TypedCameraProperty<CommonValueType: TypedCommonValue>: PropertyObs
     }
 
     private func updateValidSettableValues() {
+        valueSetType = wrappedProperty.valueSetType
         validSettableValues = wrappedProperty.validSettableValues?.compactMap({
             TypedCameraPropertyValue<CommonValueType>(wrapping: $0, of: identifier)
         }) ?? []

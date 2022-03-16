@@ -315,7 +315,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
         }
 
         let terminationHandler: LiveViewTerminationHandler = { [weak self] reason, error in
-            if reason == .failed, error?.asCascableCoreError == .deviceBusy, retryCount < 5 {
+            if reason == .failed, self?.isStartingLiveView == true, retryCount < 5 {
                 // Some cameras don't like starting live view soon after being connected to. To handle
                 // this for our subscribers, we can retry a few times for them.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {

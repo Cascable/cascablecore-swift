@@ -4,6 +4,7 @@ import CascableCore
 // MARK: - Types
 
 public typealias TypedCommonValue = Equatable & TranslateableFromObjCCommonValue
+public typealias TypedCommonExposureValue = Equatable & UniversalExposurePropertyValue & TranslateableFromObjCCommonValue
 
 /// A `TypedIdentifier` is a strongly-typed replacement for `CBLPropertyIdentifier`.
 public struct TypedIdentifier<CommonValueType: TypedCommonValue>: Equatable {
@@ -82,6 +83,10 @@ public extension TypedIdentifier where CommonValueType == PropertyCommonValueDri
     static let driveMode = TypedIdentifier(identifier: .driveMode)
 }
 
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueImageDestination {
+    static let imageDestination = TypedIdentifier(identifier: .imageDestination)
+}
+
 public extension TypedIdentifier where CommonValueType == NoCommonValues {
 
     // Things we don't have common values for yet
@@ -123,7 +128,7 @@ public extension PropertyIdentifier {
         case .whiteBalance, .colorTone, .artFilter, .autoExposureMode, .exposureMeteringMode:
             return .imagingSetting
 
-        case .inCameraBracketingEnabled, .noiseReduction, .imageQuality:
+        case .inCameraBracketingEnabled, .noiseReduction, .imageQuality, .imageDestination:
             return .configurationSetting
 
         case .batteryLevel, .powerSource, .shotsAvailable, .lensStatus, .lightMeterStatus, .dofPreviewEnabled, .readyForCapture:
@@ -282,6 +287,14 @@ extension PropertyCommonValueDriveMode: TranslateableFromObjCCommonValue {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
         return PropertyCommonValueDriveMode(rawValue: typedValue)
+    }
+}
+
+extension PropertyCommonValueImageDestination: TranslateableFromObjCCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueImageDestination? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueImageDestination(rawValue: typedValue)
     }
 }
 

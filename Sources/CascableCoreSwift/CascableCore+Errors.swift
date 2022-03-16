@@ -35,6 +35,8 @@ public extension Error {
         case .requiresLiveView: return .requiresLiveView
         case .cardError: return .cardError
         case .storageFull: return .storageFull
+        case .incorrectCommunicationMode: return .incorrectCommunicationMode
+        case .objectTooLarge: return .objectTooLarge
         @unknown default: return .generic
         }
     }
