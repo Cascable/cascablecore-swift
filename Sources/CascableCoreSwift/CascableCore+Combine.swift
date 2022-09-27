@@ -108,6 +108,11 @@ public extension Camera {
         return publisher(for: \.supportedFunctionality).eraseToAnyPublisher()
     }
 
+    /// Create a publisher for the camera's `currentCommandCategories` property.
+    func currentCommandCategoriesPublisher() -> AnyPublisher<AvailableCommandCategory, Never> where Self: NSObject & Camera {
+        return publisher(for: \.currentCommandCategories).eraseToAnyPublisher()
+    }
+
     /// Create a publisher for the camera's `videoRecordingState` property.
     func videoRecordingStatePublisher() -> AnyPublisher<VideoRecordingState, Never> where Self: NSObject & Camera {
         return publisher(for: \.isRecordingVideo, options: [.initial, .new])
