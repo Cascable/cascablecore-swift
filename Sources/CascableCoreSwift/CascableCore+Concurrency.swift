@@ -105,16 +105,17 @@ public extension TypedCameraProperty {
         if currentValue == expectedValue { return }
 
         try await withCheckedThrowingContinuation({ (continuation: CheckedContinuation<Void, Error>) in
-            var observation: CameraPropertyObservation? = nil
-            var didTimeout: Bool = false
+            // Swift doesn't like is having state values here then capturing them in blocks later on,
+            // so having a constant pointer for our states is needed.
+            let timeoutState = WriteableTimeoutState()
 
             // It's possible that the camera will never reflect the set value — either because something else
             // set the value to something else really quickly, or the requested value gets adjusted on-the-fly
             // by the camera to fit with some other setting or environmental condition. So, we need a timeout.
             let timeoutTimer = Timer(timeInterval: max(0.25, timeout), repeats: false, block: { [weak self] timer in
                 timer.invalidate()
-                didTimeout = true
-                if let observation = observation { self?.removeObserver(observation) }
+                timeoutState.didTimeout = true
+                if let observation = timeoutState.observation { self?.removeObserver(observation) }
                 continuation.resume(throwing: NSError(cblErrorCode: .timeout))
             })
 
@@ -122,12 +123,12 @@ public extension TypedCameraProperty {
 
             // With a timeout in place, we can add an observer to the property's value and wait until it
             // changes to the value we set.
-            observation = addObserver({ sender, changeType in
-                guard !didTimeout else { return }
+            timeoutState.observation = addObserver({ sender, changeType in
+                guard !timeoutState.didTimeout else { return }
                 guard changeType.contains(.value) else { return }
                 if sender.currentValue == expectedValue {
                     timeoutTimer.invalidate()
-                    if let observation = observation { sender.removeObserver(observation) }
+                    if let observation = timeoutState.observation { sender.removeObserver(observation) }
                     continuation.resume(returning: ())
                 }
             })
@@ -160,15 +161,16 @@ public extension TypedCameraProperty {
         if currentValue != unwantedValue { return currentValue }
 
         return try await withCheckedThrowingContinuation({ continuation in
-            var observation: CameraPropertyObservation? = nil
-            var didTimeout: Bool = false
+            // Swift doesn't like is having state values here then capturing them in blocks later on,
+            // so having a constant pointer for our states is needed.
+            let timeoutState = WriteableTimeoutState()
 
             // It's possible that the camera will never reflect a new value (maybe we're at the end of a list?).
             // So, we need a timeout.
             let timeoutTimer = Timer(timeInterval: max(0.25, timeout), repeats: false, block: { [weak self] timer in
                 timer.invalidate()
-                didTimeout = true
-                if let observation = observation { self?.removeObserver(observation) }
+                timeoutState.didTimeout = true
+                if let observation = timeoutState.observation { self?.removeObserver(observation) }
                 continuation.resume(throwing: NSError(cblErrorCode: .timeout))
             })
 
@@ -176,12 +178,12 @@ public extension TypedCameraProperty {
 
             // With a timeout in place, we can add an observer to the property's value and wait until it
             // changes to the value we set.
-            observation = addObserver({ sender, changeType in
-                guard !didTimeout else { return }
+            timeoutState.observation = addObserver({ sender, changeType in
+                guard !timeoutState.didTimeout else { return }
                 guard changeType.contains(.value) else { return }
                 if sender.currentValue != unwantedValue {
                     timeoutTimer.invalidate()
-                    if let observation = observation { sender.removeObserver(observation) }
+                    if let observation = timeoutState.observation { sender.removeObserver(observation) }
                     continuation.resume(returning: sender.currentValue)
                 }
             })
@@ -189,3 +191,7 @@ public extension TypedCameraProperty {
     }
 }
 
+fileprivate class WriteableTimeoutState {
+    var observation: CameraPropertyObservation? = nil
+    var didTimeout: Bool = false
+}
