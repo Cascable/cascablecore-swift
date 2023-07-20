@@ -15,6 +15,15 @@ public struct TypedIdentifier<CommonValueType: TypedCommonValue>: Equatable {
     }
 }
 
+/// The common value for video format properties, allowing inspection of frame rate and size.
+public struct VideoFormatValue: Equatable {
+    /// The video format's frame rate, or `nil` if not available.
+    let frameRate: Int?
+
+    /// The video format's frame size (in pixels), or `nil` if not available.
+    let frameSize: CGSize?
+}
+
 // MARK: - Property Identifier Declarations
 
 public extension TypedIdentifier where CommonValueType == ApertureValue {
@@ -87,6 +96,10 @@ public extension TypedIdentifier where CommonValueType == PropertyCommonValueIma
     static let imageDestination = TypedIdentifier(identifier: .imageDestination)
 }
 
+public extension TypedIdentifier where CommonValueType == VideoFormatValue {
+    static let videoRecordingFormat = TypedIdentifier(identifier: .videoRecordingFormat)
+}
+
 public extension TypedIdentifier where CommonValueType == NoCommonValues {
 
     // Things we don't have common values for yet
@@ -133,6 +146,9 @@ public extension PropertyIdentifier {
 
         case .batteryLevel, .powerSource, .shotsAvailable, .lensStatus, .lightMeterStatus, .dofPreviewEnabled, .readyForCapture:
             return .information
+
+        case .videoRecordingFormat:
+            return .videoFormat
 
         case .max, .unknown:
             return .unknown
@@ -319,5 +335,14 @@ extension ShutterSpeedValue: TranslateableFromObjCCommonValue {
 extension ExposureCompensationValue: TranslateableFromObjCCommonValue {
     public static func translateFromCommonValue(_ commonValue: Any) -> Self? {
         return commonValue as? Self
+    }
+}
+
+extension VideoFormatValue: TranslateableFromObjCCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> VideoFormatValue? {
+        guard let typedValue = commonValue as? VideoFormatPropertyValue else { return nil }
+        let rate: Int? = (typedValue.frameRate == NSNotFound || typedValue.frameRate == 0) ? nil : typedValue.frameRate
+        let size: CGSize? = (typedValue.frameSize == .zero) ? nil : typedValue.frameSize
+        return VideoFormatValue(frameRate: rate, frameSize: size)
     }
 }

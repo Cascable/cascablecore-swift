@@ -294,6 +294,8 @@ public struct TypedCameraPropertyValue<CommonValueType: TypedCommonValue>: Equat
 
         if let exposureValue = propertyValue as? ExposurePropertyValue {
             commonValue = CommonValueType.translateFromCommonValue(exposureValue.exposureValue)
+        } else if let videoFormatValue = propertyValue as? VideoFormatPropertyValue {
+            commonValue = CommonValueType.translateFromCommonValue(videoFormatValue)
         } else {
             commonValue = CommonValueType.translateFromCommonValue(propertyValue.commonValue)
         }
