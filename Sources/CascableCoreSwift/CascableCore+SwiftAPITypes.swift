@@ -22,6 +22,9 @@ public struct VideoFormatValue: Equatable {
 
     /// The video format's frame size (in pixels), or `nil` if not available.
     let frameSize: CGSize?
+
+    /// The video format's compression level, or `nil` if not available.
+    let compressionLevel: VideoFormatCompressionLevel?
 }
 
 // MARK: - Property Identifier Declarations
@@ -343,6 +346,7 @@ extension VideoFormatValue: TranslateableFromObjCCommonValue {
         guard let typedValue = commonValue as? VideoFormatPropertyValue else { return nil }
         let rate: Int? = (typedValue.frameRate == NSNotFound || typedValue.frameRate == 0) ? nil : typedValue.frameRate
         let size: CGSize? = (typedValue.frameSize == .zero) ? nil : typedValue.frameSize
-        return VideoFormatValue(frameRate: rate, frameSize: size)
+        let compression: VideoFormatCompressionLevel? = (typedValue.compressionLevel == .unknown) ? nil : typedValue.compressionLevel
+        return VideoFormatValue(frameRate: rate, frameSize: size, compressionLevel: compression)
     }
 }
