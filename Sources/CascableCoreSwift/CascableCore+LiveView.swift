@@ -89,7 +89,7 @@ public extension CameraLiveView {
     ///
     /// - Important: Frames will be generated on an arbitrary background queue. Use an explicit Combine scheduler to
     ///              get them where they need to be.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     var liveViewPublisher: AnyPublisher<LiveViewFrame, LiveViewStreamTerminationReason> {
         return liveViewPublisher(options: [:])
     }
@@ -104,7 +104,7 @@ public extension CameraLiveView {
     ///              get them where they need to be.
     ///
     /// - Parameter options: The options to apply.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func liveViewPublisher(options: [LiveViewOption: Any]) -> AnyPublisher<LiveViewFrame, LiveViewStreamTerminationReason> {
         let publisher = getOrCreateLiveViewPublisher()
         publisher.applyOptions(options)
@@ -117,7 +117,7 @@ public extension CameraLiveView {
     ///         subscriptions to the camera's live view frame publisher.
     ///
     /// - Parameter options: The options to apply. Options not present will not be modified.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func applyLiveViewOptions(_ options: [LiveViewOption: Any]) {
         getOrCreateLiveViewPublisher().applyOptions(options)
     }
@@ -173,7 +173,7 @@ fileprivate var liveViewPublisherStorageObjCHandle: UInt8 = 0
 fileprivate extension CameraLiveView {
 
     // We only want one publisher per camera instance.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func getOrCreateLiveViewPublisher() -> LiveViewFramePublisher {
         if let box = liveViewPublisherStorage {
             return box.publisher
@@ -190,7 +190,7 @@ fileprivate extension CameraLiveView {
     }
 }
 
-@available(iOS 13.0, macOS 10.15, *)
+@available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
 fileprivate class LiveViewPublisherBox: NSObject {
     let publisher: LiveViewFramePublisher
     init(_ publisher: LiveViewFramePublisher) {
@@ -201,7 +201,7 @@ fileprivate class LiveViewPublisherBox: NSObject {
 // MARK: - Custom Combine Types
 
 /// A Combine publisher that delivers live view frames.
-@available(iOS 13.0, macOS 10.15, *)
+@available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
 fileprivate class LiveViewFramePublisher: Publisher {
     typealias Output = LiveViewFrame
     typealias Failure = LiveViewStreamTerminationReason
@@ -490,7 +490,7 @@ fileprivate class LiveViewFramePublisher: Publisher {
 // MARK: -
 
 // Type-erasure for `LiveViewSubscription`.
-@available(iOS 13.0, macOS 10.15, *)
+@available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
 fileprivate protocol LiveViewSubscriptionAPI: Combine.Subscription, AnyObject {
     /// Returns the current pending demand for the subscription.
     var currentDemand: Subscribers.Demand { get }
@@ -501,7 +501,7 @@ fileprivate protocol LiveViewSubscriptionAPI: Combine.Subscription, AnyObject {
 }
 
 // A subscription to the live view publisher. Very lightweight — most logic is in the publisher.
-@available(iOS 13.0, macOS 10.15, *)
+@available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
 fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, LiveViewSubscriptionAPI
     where Subscriber: Combine.Subscriber,
           Subscriber.Failure == LiveViewStreamTerminationReason,
@@ -539,7 +539,7 @@ fileprivate final class LiveViewSubscription<Subscriber>: Combine.Subscription, 
 
 // MARK: - Custom Subscribers
 
-@available(iOS 13.0, macOS 10.15, *)
+@available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
 fileprivate class DemandOnReadyHandlerSubscriber<Input, Failure>: Subscriber, Cancellable where Failure: Error {
     typealias ValueDelivery = (_ value: Input, _ readyForMoreValues: @escaping () -> Void) -> Void
     typealias CompletionDelivery = (Subscribers.Completion<Failure>) -> Void

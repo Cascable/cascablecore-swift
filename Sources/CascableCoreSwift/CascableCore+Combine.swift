@@ -12,7 +12,7 @@ public extension CameraProperties {
     /// The created publisher will immediately emit the property's current state.
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func publisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
         AnyPublisher<TypedCameraProperty<CommonValueType>, Never> {
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier),
@@ -25,7 +25,7 @@ public extension CameraProperties {
     /// The created publisher will immediately emit the property's current value.
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func valuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
         AnyPublisher<TypedCameraPropertyValue<CommonValueType>?, Never> {
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .value,
@@ -38,7 +38,7 @@ public extension CameraProperties {
     /// property's current common value.
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func commonValuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
         AnyPublisher<CommonValueType?, Never> {
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .value,
@@ -53,7 +53,7 @@ public extension CameraProperties {
     /// The created publisher will immediately emit the property's current effective value.
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func effectiveValuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
     AnyPublisher<TypedCameraPropertyValue<CommonValueType>?, Never> {
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: [.value, .pendingValue],
@@ -69,7 +69,7 @@ public extension CameraProperties {
     /// property's current common value.
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func effectiveCommonValuePublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
         AnyPublisher<CommonValueType?, Never> {
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: [.value, .pendingValue],
@@ -82,7 +82,7 @@ public extension CameraProperties {
     /// The created publisher will immediately emit the property's current valid settable values.
     ///
     /// - Parameter propertyIdentifier: The property identifier to create a publisher for.
-    @available(iOS 13.0, macOS 10.15, *)
+    @available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
     func settableValuesPublisher<CommonValueType>(for propertyIdentifier: TypedIdentifier<CommonValueType>) ->
             AnyPublisher<[TypedCameraPropertyValue<CommonValueType>], Never> {
         return TypedPropertyValuePublisher(observing: property(for: propertyIdentifier), on: .validSettableValues,
@@ -122,7 +122,7 @@ public extension Camera {
     }
 }
 
-@available(iOS 13.0, macOS 10.15, *)
+@available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
 public extension Publisher {
 
     /**
@@ -178,7 +178,7 @@ public extension Publisher {
 }
 
 /// A Combine publisher that delivers property values.
-@available(iOS 13.0, macOS 10.15, *)
+@available(iOS 13.0, macOS 10.15, macCatalyst 15.0, *)
 public struct TypedPropertyValuePublisher<CommonValueType: TypedCommonValue, PublishedType>: Publisher {
     public typealias Output = PublishedType
     public typealias Failure = Never

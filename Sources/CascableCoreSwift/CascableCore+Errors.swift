@@ -37,6 +37,8 @@ public extension Error {
         case .storageFull: return .storageFull
         case .incorrectCommunicationMode: return .incorrectCommunicationMode
         case .objectTooLarge: return .objectTooLarge
+        case .encryptedConnectionsNotSupported: return .encryptedConnectionsNotSupported
+        case .connectionAuthenticationFailed: return .connectionAuthenticationFailed
         @unknown default: return .generic
         }
     }

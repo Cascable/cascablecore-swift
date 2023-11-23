@@ -296,6 +296,8 @@ public struct TypedCameraPropertyValue<CommonValueType: TypedCommonValue>: Equat
             commonValue = CommonValueType.translateFromCommonValue(exposureValue.exposureValue)
         } else if let videoFormatValue = propertyValue as? VideoFormatPropertyValue {
             commonValue = CommonValueType.translateFromCommonValue(videoFormatValue)
+        } else if let liveViewZoomValue = propertyValue as? LiveViewZoomLevelPropertyValue {
+            commonValue = CommonValueType.translateFromCommonValue(liveViewZoomValue)
         } else {
             commonValue = CommonValueType.translateFromCommonValue(propertyValue.commonValue)
         }
