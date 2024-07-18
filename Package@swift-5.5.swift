@@ -1,9 +1,9 @@
-// swift-tools-version:5.9
+// swift-tools-version:5.5
 import PackageDescription
 
 let package = Package(
     name: "CascableCoreSwift",
-    platforms: [.macOS(.v10_15), .iOS(.v13), .macCatalyst(.v15), .visionOS("1.1")],
+    platforms: [.macOS(.v10_15), .iOS(.v13), .macCatalyst(.v15)],
     products: [.library(name: "CascableCoreSwift", targets: ["CascableCoreSwift"])],
     dependencies: [
         .package(name: "CascableCore", url: "https://github.com/Cascable/cascablecore-distribution", .exact("14.0.0"))
