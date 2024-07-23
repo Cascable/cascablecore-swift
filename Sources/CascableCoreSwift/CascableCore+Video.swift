@@ -2,7 +2,7 @@ import Foundation
 import CascableCore
 
 /// Video recording timer types.
-public enum VideoRecordingTimerValue {
+public enum VideoRecordingTimerValue: Hashable, Equatable {
     /// The timer is counting down towards zero with the given value in seconds (i.e., it's a "time remaining" timer).
     case countingDown(value: TimeInterval)
     /// The timer is counting up from zero with the given value in seconds (i.e., it's a "clip length" timer).
@@ -24,7 +24,7 @@ public enum VideoRecordingTimerValue {
 }
 
 /// A camera's video recording state.
-public enum VideoRecordingState {
+public enum VideoRecordingState: Hashable, Equatable {
     /// The camera isn't recording video.
     case notRecording
     /// The camera is recording video with the given timer.
