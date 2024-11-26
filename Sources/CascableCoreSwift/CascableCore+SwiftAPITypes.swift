@@ -39,18 +39,22 @@ public struct LiveViewZoomLevelValue: Equatable {
 
 public extension TypedIdentifier where CommonValueType == ApertureValue {
     static let aperture = TypedIdentifier(identifier: .aperture)
+    static let videoAperture = TypedIdentifier(identifier: .videoAperture)
 }
 
 public extension TypedIdentifier where CommonValueType == ShutterSpeedValue {
     static let shutterSpeed = TypedIdentifier(identifier: .shutterSpeed)
+    static let videoShutterSpeed = TypedIdentifier(identifier: .videoShutterSpeed)
 }
 
 public extension TypedIdentifier where CommonValueType == ISOValue {
     static let iso = TypedIdentifier(identifier: .isoSpeed)
+    static let videoISO = TypedIdentifier(identifier: .videoISOSpeed)
 }
 
 public extension TypedIdentifier where CommonValueType == ExposureCompensationValue {
     static let exposureCompensation = TypedIdentifier(identifier: .exposureCompensation)
+    static let videoExposureCompensation = TypedIdentifier(identifier: .videoExposureCompensation)
     static let lightMeterReading = TypedIdentifier(identifier: .lightMeterReading)
 }
 
@@ -147,7 +151,8 @@ public extension PropertyIdentifier {
     /// Returns the category that the property identifier belongs to.
     var category: PropertyCategory {
         switch self {
-        case .isoSpeed, .shutterSpeed, .aperture, .exposureCompensation, .lightMeterReading:
+        case .isoSpeed, .shutterSpeed, .aperture, .exposureCompensation, .lightMeterReading,
+                .videoISOSpeed, .videoShutterSpeed, .videoAperture, .videoExposureCompensation:
             return .exposureSetting
 
         case .afSystem, .focusMode, .driveMode, .mirrorLockupEnabled, .mirrorLockupStage, .digitalZoom:
