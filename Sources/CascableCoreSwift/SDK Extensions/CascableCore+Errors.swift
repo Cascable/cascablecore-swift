@@ -39,6 +39,8 @@ public extension Error {
         case .objectTooLarge: return .objectTooLarge
         case .encryptedConnectionsNotSupported: return .encryptedConnectionsNotSupported
         case .connectionAuthenticationFailed: return .connectionAuthenticationFailed
+        case .networkChangeFailed: return .networkChangeFailed
+        case .requiresLocationAuthorization: return .requiresLocationAuthorization
         @unknown default: return .generic
         }
     }

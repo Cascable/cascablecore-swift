@@ -131,7 +131,7 @@ public extension TypedIdentifier where CommonValueType == NoCommonValues {
 
 // MARK: - Extensions to CascableCore Identifiers
 
-extension PropertyIdentifier: CaseIterable {
+extension PropertyIdentifier: @retroactive CaseIterable {
     static public var allCases: [PropertyIdentifier] = {
         return (0..<PropertyIdentifier.max.rawValue).compactMap { PropertyIdentifier(rawValue: $0) }
     }()

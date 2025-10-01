@@ -3,7 +3,9 @@ import CascableCore
 import Combine
 import ObjectiveC
 
-extension LiveViewTerminationReason: Error {}
+extension LiveViewTerminationReason: @retroactive _BridgedNSError {}
+extension LiveViewTerminationReason: @retroactive _ObjectiveCBridgeableError {}
+extension LiveViewTerminationReason: @retroactive Error {}
 
 // MARK: - Public API
 
