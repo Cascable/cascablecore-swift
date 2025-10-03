@@ -1,12 +1,21 @@
 ## CascableCoreSwift
 
-CascableCoreSwift is a Swift package that provides better, more "Swift-y" APIs for [CascableCore](https://github.com/cascable/cascablecore-distribution/) — an SDK for working with over 200 models of WiFi-enabled DSLR and mirrorless cameras. This package is additive in that it adds to the existing CascableCore APIs rather than replacing it.
+CascableCoreSwift is a Swift package that provides better, more "Swift-y" APIs for [CascableCore](https://github.com/cascable/cascablecore-distribution/) — an SDK for working with over 200 models of DSLR and mirrorless cameras. This package is additive in that it adds to the existing CascableCore APIs rather than replacing it.
 
 - For more information on the CascableCore product, including getting a trial license, see the [Cascable Developer Portal](https://developer.cascable.se/).
 
 - The best starting point for working with the SDK is by seeing CascableCore in action by checking out the [CascableCore Demo Projects](https://github.com/Cascable/cascablecore-demo) repository. You'll need a trial license for it to do anything useful!
 
 - Next, our [Getting Started With CascableCore](https://github.com/Cascable/cascablecore-demo/blob/master/Getting%20Started%20With%20CascableCore.md) document contains discussion about the CascableCore APIs and concepts in the order in which you're likely to encounter them. These APIs and concepts are equally important for both Objective-C and Swift developers.
+
+### Contents
+
+- [Strongly-Typed Property API](#strongly-typed-property-api)
+- [Combine Publishers](#combine-publishers)
+    - [Basic Usage](#basic-usage)
+    - [Live View](#live-view)
+- [Metal-Backed Live View Rendering View Controller](#metal-backed-live-view-rendering-view-controller)
+- [Manual Camera Discovery](#strongly-typed-property-api)
 
 
 ### Strongly-Typed Property API
@@ -139,6 +148,33 @@ camera.liveViewPublisher(options: [.skipImageDecoding: true])
         }
     }
 ```
+
+
+### Metal-Backed Live View Rendering View Controller
+
+Some cameras deliver high-framerate, high-quality live view streams that're a challenge to handle efficiently. For our app [Cascable Studio](https://cascable.se/studio/) we developed a rendering pipeline that uses Metal to keep live view rendering entirely on the GPU, significantly reducing resource usage and increasing performance compared to using solutions like `UIImageView`.
+
+With CascableCore 16, we're excited to be able to open-source this for everyone to use!
+
+Included is an easy-to-use Metal-backed `UIViewController` that you can use to display live view in your app. Simply create the view controller and place it into your UI as you would any other, then connect it to a camera's live view feed:
+
+```swift
+// Make sure you pass .skipImageDecoding since CascableCore's internal 
+// decoding is CPU-based and resource-intensive.
+
+camera.liveViewPublisher(options: [.skipImageDecoding: true])
+    .receive(on: DispatchQueue.main)
+    .sinkWithReadyHandler { completion in
+        print("Live view ended with completion reason: \(completion)" )
+    } receiveValue: { frame, readyForNextFrame in
+        liveViewRendererView.render(frame: frame, completionHandler: { orientation, size in 
+            // Sync the rest of your UI with the orientation etc.
+            readyForNextFrame()
+        })
+    }
+```
+
+The underlying Metal rendering pipeline works on all platforms, while the view controller is currently only for UIKit-based platforms (i.e., everything except for AppKit-based macOS apps, including Mac Catalyst). If you have need for an AppKit view controller, please get in touch.
 
 
 ### Manual Camera Discovery
