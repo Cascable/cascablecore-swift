@@ -56,6 +56,7 @@ public extension TypedIdentifier where CommonValueType == ExposureCompensationVa
     static let exposureCompensation = TypedIdentifier(identifier: .exposureCompensation)
     static let videoExposureCompensation = TypedIdentifier(identifier: .videoExposureCompensation)
     static let lightMeterReading = TypedIdentifier(identifier: .lightMeterReading)
+    static let flashExposureCompensation = TypedIdentifier(identifier: .flashExposureCompensation)
 }
 
 public extension TypedIdentifier where CommonValueType == Bool {
@@ -93,6 +94,7 @@ public extension TypedIdentifier where CommonValueType == PropertyCommonValueLig
 
 public extension TypedIdentifier where CommonValueType == Int {
     static let shotsAvailable = TypedIdentifier(identifier: .shotsAvailable)
+    static let customWhiteBalanceValue = TypedIdentifier(identifier: .customWhiteBalanceValue)
 }
 
 public extension TypedIdentifier where CommonValueType == PropertyCommonValueMirrorLockupStage {
@@ -109,6 +111,10 @@ public extension TypedIdentifier where CommonValueType == PropertyCommonValueDri
 
 public extension TypedIdentifier where CommonValueType == PropertyCommonValueImageDestination {
     static let imageDestination = TypedIdentifier(identifier: .imageDestination)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueFlashMode {
+    static let flashMode = TypedIdentifier(identifier: .flashMode)
 }
 
 public extension TypedIdentifier where CommonValueType == VideoFormatValue {
@@ -152,13 +158,13 @@ public extension PropertyIdentifier {
     var category: PropertyCategory {
         switch self {
         case .isoSpeed, .shutterSpeed, .aperture, .exposureCompensation, .lightMeterReading,
-                .videoISOSpeed, .videoShutterSpeed, .videoAperture, .videoExposureCompensation:
+                .videoISOSpeed, .videoShutterSpeed, .videoAperture, .videoExposureCompensation, .flashExposureCompensation:
             return .exposureSetting
 
         case .afSystem, .focusMode, .driveMode, .mirrorLockupEnabled, .mirrorLockupStage, .digitalZoom:
             return .captureSetting
 
-        case .whiteBalance, .colorTone, .artFilter, .autoExposureMode, .exposureMeteringMode:
+        case .whiteBalance, .customWhiteBalanceValue, .colorTone, .artFilter, .autoExposureMode, .exposureMeteringMode, .flashMode:
             return .imagingSetting
 
         case .inCameraBracketingEnabled, .noiseReduction, .imageQuality, .imageDestination:
@@ -334,6 +340,14 @@ extension PropertyCommonValueImageDestination: TranslateableFromObjCCommonValue 
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
         return PropertyCommonValueImageDestination(rawValue: typedValue)
+    }
+}
+
+extension PropertyCommonValueFlashMode: TranslateableFromObjCCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueFlashMode? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueFlashMode(rawValue: typedValue)
     }
 }
 
