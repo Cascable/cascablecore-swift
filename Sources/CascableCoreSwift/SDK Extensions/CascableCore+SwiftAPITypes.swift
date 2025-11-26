@@ -66,6 +66,7 @@ public extension TypedIdentifier where CommonValueType == Bool {
     static let digitalZoomEnabled = TypedIdentifier(identifier: .digitalZoom)
     static let inCameraBracketingEnabled = TypedIdentifier(identifier: .inCameraBracketingEnabled)
     static let readyForCapture = TypedIdentifier(identifier: .readyForCapture)
+    static let flashAvailable = TypedIdentifier(identifier: .flashAvailable)
 }
 
 public extension TypedIdentifier where CommonValueType == PropertyCommonValuePowerSource {
@@ -170,7 +171,7 @@ public extension PropertyIdentifier {
         case .inCameraBracketingEnabled, .noiseReduction, .imageQuality, .imageDestination:
             return .configurationSetting
 
-        case .batteryLevel, .powerSource, .shotsAvailable, .lensStatus, .lightMeterStatus, .dofPreviewEnabled, .readyForCapture:
+        case .batteryLevel, .powerSource, .shotsAvailable, .lensStatus, .lightMeterStatus, .dofPreviewEnabled, .readyForCapture, .flashAvailable:
             return .information
 
         case .videoRecordingFormat:
