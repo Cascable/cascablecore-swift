@@ -5,8 +5,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Cascable/cascablecore-distribution",
       "state" : {
-        "revision" : "ea48eafa52c0493b2e8893d372146526040cbb83",
-        "version" : "17.0.0-beta.3"
+        "revision" : "40e248ccd05cc4e614545fdfeceb0c1716c802f6",
+        "version" : "17.0.0"
       }
     }
   ],
