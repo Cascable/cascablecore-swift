@@ -6,7 +6,7 @@ let package = Package(
     platforms: [.macOS(.v11), .iOS(.v14), .macCatalyst(.v15)],
     products: [.library(name: "CascableCoreSwift", targets: ["CascableCoreSwift"])],
     dependencies: [
-        .package(name: "CascableCore", url: "https://github.com/Cascable/cascablecore-distribution", from: "17.0.1")
+        .package(name: "CascableCore", url: "https://github.com/Cascable/cascablecore-distribution", from: "17.0.2")
     ],
     targets: [
         .target(name: "CascableCoreSwift", dependencies: ["CascableCore"]),
