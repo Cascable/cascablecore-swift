@@ -15,7 +15,8 @@ CascableCoreSwift is a Swift package that provides better, more "Swift-y" APIs f
     - [Basic Usage](#basic-usage)
     - [Live View](#live-view)
 - [Metal-Backed Live View Rendering View Controller](#metal-backed-live-view-rendering-view-controller)
-- [Manual Camera Discovery](#strongly-typed-property-api)
+- [Manual Camera Discovery](#manual-camera-discovery)
+- [License Key Activation](#license-key-activation)
 
 
 ### Strongly-Typed Property API
@@ -205,3 +206,24 @@ manualDiscovery.discover(.cameraType(.canon, atGatewayOfInterface: "en0")) { res
 }
 ```
 
+### License Key Activation
+
+This package adds an `async` version of the license key activation API, simplifying the process.
+
+``` swift
+// Make sure we use a previously-granted offline activation token.
+let existingToken: Data? = UserDefaults.standard.data(forKey: "CascableCoreOfflineToken")
+
+do {
+    let validatedToken = try await CascableCoreLicenseVerification.apply("1234", offlineToken: existingToken)
+
+    if validatedToken.wasRefreshed {
+        // Make sure you store updated offline activation tokens!
+        UserDefaults.standard.set(validatedToken.tokenData, forKey: "CascableCoreOfflineToken")
+    }
+
+    // The SDK is now activated and can be used.
+    searchForCameras()
+} catch {
+    print("WARNING: License key activation failed: \(error.localizedDescription)")
+}
