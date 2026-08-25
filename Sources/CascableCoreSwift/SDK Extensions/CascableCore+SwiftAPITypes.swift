@@ -120,10 +120,21 @@ public extension TypedIdentifier where CommonValueType == PropertyCommonValueFla
 
 public extension TypedIdentifier where CommonValueType == VideoFormatValue {
     static let videoRecordingFormat = TypedIdentifier(identifier: .videoRecordingFormat)
+    static let videoRecordingCompressionLevel = TypedIdentifier(identifier: .videoRecordingCompressionLevel)
+    static let videoRecordingFrameRate = TypedIdentifier(identifier: .videoRecordingFrameRate)
+    static let videoRecordingResolution = TypedIdentifier(identifier: .videoRecordingResolution)
 }
 
 public extension TypedIdentifier where CommonValueType == LiveViewZoomLevelValue {
     static let liveViewZoomLevel = TypedIdentifier(identifier: .liveViewZoomLevel)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueThermalState {
+    static let thermalState = TypedIdentifier(identifier: .thermalState)
+}
+
+public extension TypedIdentifier where CommonValueType == PropertyCommonValueExposureSimulation {
+    static let exposureSimulation = TypedIdentifier(identifier: .exposureSimulation)
 }
 
 public extension TypedIdentifier where CommonValueType == NoCommonValues {
@@ -168,13 +179,14 @@ public extension PropertyIdentifier {
         case .whiteBalance, .customWhiteBalanceValue, .colorTone, .artFilter, .autoExposureMode, .exposureMeteringMode, .flashMode:
             return .imagingSetting
 
-        case .inCameraBracketingEnabled, .noiseReduction, .imageQuality, .imageDestination:
+        case .inCameraBracketingEnabled, .noiseReduction, .imageQuality, .imageDestination, .exposureSimulation:
             return .configurationSetting
 
-        case .batteryLevel, .powerSource, .shotsAvailable, .lensStatus, .lightMeterStatus, .dofPreviewEnabled, .readyForCapture, .flashAvailable:
+        case .batteryLevel, .powerSource, .shotsAvailable, .lensStatus, .lightMeterStatus, .dofPreviewEnabled,
+                .readyForCapture, .flashAvailable, .thermalState:
             return .information
 
-        case .videoRecordingFormat:
+        case .videoRecordingFormat, .videoRecordingFrameRate, .videoRecordingResolution, .videoRecordingCompressionLevel:
             return .videoFormat
 
         case .liveViewZoomLevel:
@@ -349,6 +361,22 @@ extension PropertyCommonValueFlashMode: TranslateableFromObjCCommonValue {
         guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
         guard typedValue != PropertyCommonValueNone else { return nil }
         return PropertyCommonValueFlashMode(rawValue: typedValue)
+    }
+}
+
+extension PropertyCommonValueThermalState: TranslateableFromObjCCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueThermalState? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueThermalState(rawValue: typedValue)
+    }
+}
+
+extension PropertyCommonValueExposureSimulation: TranslateableFromObjCCommonValue {
+    public static func translateFromCommonValue(_ commonValue: Any) -> PropertyCommonValueExposureSimulation? {
+        guard let typedValue = commonValue as? PropertyCommonValue else { return nil }
+        guard typedValue != PropertyCommonValueNone else { return nil }
+        return PropertyCommonValueExposureSimulation(rawValue: typedValue)
     }
 }
 
