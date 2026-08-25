@@ -108,15 +108,18 @@ public extension TypedCameraProperty {
             // Swift doesn't like is having state values here then capturing them in blocks later on,
             // so having a constant pointer for our states is needed.
             let timeoutState = WriteableTimeoutState()
+            // Since we're only working with self on the main queue, we can use nonisolated(unsafe) to silence the warnings.
+            nonisolated(unsafe) weak var weakSelf = self
 
             // It's possible that the camera will never reflect the set value — either because something else
             // set the value to something else really quickly, or the requested value gets adjusted on-the-fly
             // by the camera to fit with some other setting or environmental condition. So, we need a timeout.
-            let timeoutTimer = Timer(timeInterval: max(0.25, timeout), repeats: false, block: { [weak self] timer in
+            let timeoutTimer = Timer(timeInterval: max(0.25, timeout), repeats: false, block: { timer in
                 timer.invalidate()
                 timeoutState.didTimeout = true
-                if let observation = timeoutState.observation { self?.removeObserver(observation) }
+                if let observation = timeoutState.observation { weakSelf?.removeObserver(observation) }
                 continuation.resume(throwing: NSError(cblErrorCode: .timeout))
+                weakSelf = nil
             })
 
             RunLoop.main.add(timeoutTimer, forMode: .common)
@@ -164,14 +167,17 @@ public extension TypedCameraProperty {
             // Swift doesn't like is having state values here then capturing them in blocks later on,
             // so having a constant pointer for our states is needed.
             let timeoutState = WriteableTimeoutState()
+            // Since we're only working with self on the main queue, we can use nonisolated(unsafe) to silence the warnings.
+            nonisolated(unsafe) weak var weakSelf = self
 
             // It's possible that the camera will never reflect a new value (maybe we're at the end of a list?).
             // So, we need a timeout.
-            let timeoutTimer = Timer(timeInterval: max(0.25, timeout), repeats: false, block: { [weak self] timer in
+            let timeoutTimer = Timer(timeInterval: max(0.25, timeout), repeats: false, block: { timer in
                 timer.invalidate()
                 timeoutState.didTimeout = true
-                if let observation = timeoutState.observation { self?.removeObserver(observation) }
+                if let observation = timeoutState.observation { weakSelf?.removeObserver(observation) }
                 continuation.resume(throwing: NSError(cblErrorCode: .timeout))
+                weakSelf = nil
             })
 
             RunLoop.main.add(timeoutTimer, forMode: .common)
@@ -191,7 +197,8 @@ public extension TypedCameraProperty {
     }
 }
 
-fileprivate class WriteableTimeoutState {
+// We're only ever using this from the main queue, so we can use @unchecked Sendable.
+fileprivate class WriteableTimeoutState: @unchecked Sendable {
     var observation: CameraPropertyObservation? = nil
     var didTimeout: Bool = false
 }
